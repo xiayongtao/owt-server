@@ -46,32 +46,20 @@ install_boost(){
   fi
 }
 
-enable_intel_gpu_top() {
-  # make intel-gpu-tools accessable by non-root users.
-  sudo chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*
-  # make the above change effect at every system startup.
-  sudo chmod +x /etc/rc.local /etc/rc.d/rc.local
-  if sudo grep -RInqs "chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*" /etc/rc.local; then
-     echo "intel-gpu-tools has been authorised to non-root users."
-  else
-     sudo sh -c "echo \"chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*\" >> /etc/rc.local"
-  fi
-}
-
 installYumDeps(){
-  sudo -E yum groupinstall " Development Tools" "Development Libraries " -y
-  sudo -E yum install zlib-devel pkgconfig git libcurl-devel.x86_64 curl log4cxx-devel gcc gcc-c++ bzip2 bzip2-devel bzip2-libs python-devel nasm libXext-devel libXfixes-devel libpciaccess-devel libX11-devel yasm cmake -y
-  sudo -E yum install rabbitmq-server mongodb mongodb-server java-1.7.0-openjdk gyp intel-gpu-tools which libtool freetype-devel -y
-  enable_intel_gpu_top
-
-  sudo -E yum install glib2-devel boost-devel -y
+  ${SUDO} yum groupinstall " Development Tools" "Development Libraries " -y
+  ${SUDO} yum install zlib-devel pkgconfig git libcurl-devel.x86_64 curl log4cxx-devel gcc gcc-c++ bzip2 bzip2-devel bzip2-libs python-devel nasm libXext-devel libXfixes-devel libpciaccess-devel libX11-devel yasm cmake -y
+  ${SUDO} yum install rabbitmq-server mongodb mongodb-server java-1.7.0-openjdk gyp intel-gpu-tools which libtool freetype-devel -y
+  ${SUDO} yum install glib2-devel boost-devel -y
+  ${SUDO} yum install centos-release-scl -y
+  ${SUDO} yum install devtoolset-7-gcc* -y
 }
 
 installRepo(){
   wget -c http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
   wget -c http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
-  sudo rpm -Uvh remi-release-7*.rpm epel-release-latest-7*.rpm
-  sudo sed -i 's/https/http/g' /etc/yum.repos.d/epel.repo
+  ${SUDO} rpm -Uvh remi-release-7*.rpm epel-release-latest-7*.rpm
+  ${SUDO} sed -i 's/https/http/g' /etc/yum.repos.d/epel.repo
   rm *.rpm
 }
 

@@ -1,4 +1,4 @@
-#include <re.h>
+#include <re/re.h>
 #include <baresip.h>
 #include <sipua.h>
 #include "core.h"
@@ -23,9 +23,9 @@ static void sipua_do_call(void *data, void *arg)
 static void sipua_do_hangup(void *data, void *arg)
 {
 	struct uag *uag = (struct uag *)arg;
-	(void)data;
+	struct call *call = (data ? (struct call *)data : NULL);
 
-	ua_hangup(uag_current(uag), NULL, 0, NULL);
+	ua_hangup(uag_current(uag), call, 0, NULL);
 	return;
 }
 
@@ -43,6 +43,15 @@ static void sipua_do_call_connect(void *data, void *arg)
 	struct sipua_call_connect *connect = (struct sipua_call_connect *)data;
         (void)arg;
         call_set_owner((struct call*)(connect->call), connect->owner);
+	mem_deref(connect);
+	return;
+}
+
+static void sipua_do_call_disconnect(void *data, void *arg)
+{
+	struct sipua_call_connect *connect = (struct sipua_call_connect *)data;
+        (void)arg;
+        call_set_owner((struct call*)(connect->call), NULL);
 	mem_deref(connect);
 	return;
 }
@@ -97,6 +106,9 @@ void sipua_cmd_handler(int id, void *data, void *arg)
 		    break;
                 case SIPUA_CALL_CONNECT:
                     sipua_do_call_connect(data, arg);
+                    break;
+                case SIPUA_CALL_DISCONNECT:
+                    sipua_do_call_disconnect(data, arg);
                     break;
 		default:
 		    printf("\n Unknown cmd code");

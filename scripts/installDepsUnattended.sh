@@ -12,6 +12,12 @@ DISABLE_NONFREE=true
 CLEANUP=false
 NIGHTLY=false
 NO_INTERNAL=false
+INCR_INSTALL=false
+SUDO=""
+
+if [[ $EUID -ne 0 ]]; then
+  SUDO="sudo -E"
+fi
 
 parse_arguments(){
   while [ "$1" != "" ]; do
@@ -27,6 +33,9 @@ parse_arguments(){
         ;;
       "--no-internal")
         NO_INTERNAL=true
+        ;;
+      "--incremental")
+        INCR_INSTALL=true
         ;;
     esac
     shift
@@ -60,8 +69,6 @@ fi
 
 install_node
 
-check_proxy
-
 if [ "$NIGHTLY" != "true" ]; then
 
   if [ "$DISABLE_NONFREE" = "true" ]; then
@@ -88,12 +95,13 @@ if [ "$NIGHTLY" != "true" ]; then
 
   install_libsrtp2
 
+  install_quic
+
   install_licode
 
-  if [[ "$OS" =~ .*ubuntu.* ]]
-  then
-      install_svt_hevc
-  fi
+  install_svt_hevc
+
+  install_json_hpp
 
 fi
 

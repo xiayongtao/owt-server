@@ -14,6 +14,8 @@
       '../../../../core/owt_base/FFmpegFrameDecoder.cpp',
       '../../../../core/owt_base/FrameProcesser.cpp',
       '../../../../core/owt_base/FFmpegDrawText.cpp',
+      '../../../../core/owt_base/SVTHEVCEncoder.cpp',
+      '../../../../core/common/JobTimer.cpp',
     ],
     'cflags_cc': [
         '-Wall',
@@ -22,6 +24,7 @@
         '-std=c++11',
         '-DWEBRTC_POSIX',
         '-DBUILD_FOR_ANALYTICS',
+        '-DENABLE_SVT_HEVC_ENCODER',
     ],
     'cflags_cc!': [
         '-fno-exceptions',
@@ -42,27 +45,7 @@
       '<!@(pkg-config --libs libavcodec)',
       '<!@(pkg-config --libs libavformat)',
       '<!@(pkg-config --libs libavfilter)',
+      '-L$(CORE_HOME)/../../build/libdeps/build/lib', '-lSvtHevcEnc',
     ],
-
-    'variables': {
-        'LINUX_RELEASE%': '<!(../../../../../scripts/detectOS.sh | sed "s/[A-Z]/\l&/g" | sed "s/.*\(ubuntu\).*/\\1/g")',
-    },
-    'conditions': [
-        ['LINUX_RELEASE=="ubuntu"', {
-            'defines': [
-                'ENABLE_SVT_HEVC_ENCODER',
-            ],
-            'sources': [
-                '../../../../core/owt_base/SVTHEVCEncoder.cpp',
-            ],
-            'include_dirs': [
-                '$(CORE_HOME)/../../third_party/SVT-HEVC/Source/API',
-            ],
-            'libraries': [
-                '-L$(CORE_HOME)/../../third_party/SVT-HEVC', '-lSvtHevcEnc',
-            ],
-        }]
-    ],
-
   }]
 }

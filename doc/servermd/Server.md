@@ -95,7 +95,7 @@ For download or installation instructions, please visit https://github.com/Intel
 The external stream output and mp4 format recording rely on AAC encoder libfdk_aac support in ffmpeg library, please see [Compile and deploy ffmpeg with libfdk_aac](#Conferencesection2_3_5) section for detailed instructions.
 
  **Table 2-2. Client compatibility**
-Application Name|Google Chrome\* 73|Mozilla Firefox\* 66|Microsoft Edge\* 44.17763.1.0|Safari\* 12.1|Open WebRTC Toolkit Client SDK for Android | Open WebRTC Toolkit Client SDK for iOS | Open WebRTC Toolkit Client SDK for Windows
+Application Name|Google Chrome\* 78|Mozilla Firefox\* 70|Microsoft Edge\* 44.18362.387.0|Safari\* 13.0|Open WebRTC Toolkit Client SDK for Android | Open WebRTC Toolkit Client SDK for iOS | Open WebRTC Toolkit Client SDK for Windows
 --------|--------|--------|--------|--------|--------|--------|--------
 OWT Client|YES|YES|YES|YES|YES|YES|YES
 Management Console|YES|YES|YES|YES|N/A|N/A|N/A
@@ -122,48 +122,6 @@ Before installing the OWT server, make sure your login account has sys-admin pri
 ### 2.3.2 Configure the OWT server machine {#Conferencesection2_3_2}
 
 If you run OWT server on CentOS, configure the system firewall well to make sure all ports required by OWT server components are open.
-
-In order for the OWT server to deliver the best performance on video conferencing, the following system configuration is recommended:
-
-1. Add or update the following lines in /etc/security/limits.conf, in order to set the maximum numbers of open files, running processes and maximum stack size to a large enough number:
-
-        * hard nproc unlimited
-        * soft nproc unlimited
-        * hard nofile 163840
-        * soft nofile 163840
-        * hard stack 8192
-        * soft stack 8192
-
-   If you only want to target these settings to specific user or group rather than all with "*", please follow the configuration rules of the /etc/security/limits.conf file.
-
-2. Make sure pam_limits.so appears in /etc/pam.d/login as following:
-
-        session required pam_limits.so
-
-   So that the updated limits.conf takes effect after your next login.
-
-3. If you run OWT server on CentOS, add or update the following two lines in /etc/security/limits.d/xx-nproc.conf as well:
-
-        * soft nproc unlimited
-        * hard nproc unlimited
-        * hard nofile 163840
-        * soft nofile 163840
-
-4. Add or update the following lines in /etc/sysctl.conf:
-
-        fs.file-max=200000
-        net.core.rmem_max=16777216
-        net.core.wmem_max=16777216
-        net.core.rmem_default=16777216
-        net.core.wmem_default=16777216
-        net.ipv4.udp_mem=4096 87380 16777216
-        net.ipv4.tcp_rmem=4096 87380 16777216
-        net.ipv4.tcp_wmem=4096 65536 16777216
-        net.ipv4.tcp_mem=8388608 8388608 16777216
-
-5. Now run command /sbin/sysctl -p to activate the new configuration, or just restart your OWT server machine.
-
-6. You can run command "ulimit -a" to make sure the new setting in limits.conf is correct as you set.
 
 ### 2.3.3 Install the OWT server package {#Conferencesection2_3_3}
 
@@ -222,7 +180,7 @@ After editing the configuration file, you should run `./initcert.js` inside each
 | DTLS-SRTP | webrtc_agent/agent.toml |
 | management-console HTTPS | management_console/management_console.toml |
 
-For OWT sample application's certificate configuration, please follow the instruction file 'README.md' located at Release-<Version>/extras/basic_example/.
+For OWT sample application's certificate configuration, please follow the instruction file 'README.md' located at Release-<Version>/apps/current_app/.
 
 ### 2.3.8 Launch the OWT server as single node {#Conferencesection2_3_8}
 To launch the OWT server on one machine, follow steps below:
@@ -319,7 +277,7 @@ Follow the steps below to set up a OWT server cluster:
 
         cd Release-<Version>/
         bin/daemon.sh start app
-   > **Note**: You can also deploy the sample application server on separated machine, follow instructions at Release-<Version>/extras/basic_example/README.md
+   > **Note**: You can also deploy the sample application server on separated machine, follow instructions at Release-<Version>/apps/current_app/README.md
 
 7. Choose machines to run cluster-managers. These machines do not need to be visible to clients, but should be visible to management-api and all workers.
 8. Edit the configurations of cluster-manager in Release-<Version>/cluster_manager/cluster_manager.toml.
@@ -345,7 +303,7 @@ Follow the steps below to set up a OWT server cluster:
 
 13. Choose a worker machine to run conference-agent and/or webrtc-agent and/or streaming-agent and/or recording-agent and/or audio-agent and/or video-agent and/or sip-agent. This machine must be visible to other agent machines. If webrtc-agent or sip-agent is running on it, it must be visible to clients.
 
-    - If you want to use Intel<sup>®</sup> Visual Compute Accelerator (VCA) to run video agents, please follow section [Configure VCA nodes](#Conferencesection2_3_10) to enable nodes of Intel VCA as a visible separated machine.
+    - If you want to use Intel<sup>®</sup> Visual Compute Accelerator (VCA) to run video agents, please follow section [Configure VCA nodes](#Conferencesection2_3_11) to enable nodes of Intel VCA as a visible separated machine.
 
 14. Edit the configuration items in Release-<Version>/{audio, video, conference, webrtc, streaming, recording, sip}_agent/agent.toml.
     - Make sure the [rabbit.port] and [rabbit.host] point to the RabbitMQ server.
@@ -780,7 +738,7 @@ Only super service user can access runtime configuration. Current management con
 ## 4.1 Introduction {#Conferencesection4_1}
 The OWT sample application server is a Web application demo that shows how to host audio/video conference services powered by the Open WebRTC Toolkit. The sample application server is based on OWT runtime components. Refer to [Section 2](#Conferencesection2) of this guide, for system requirements and launch/stop instructions.
 
-The source code of the sample application is in Release-<Version>/extras/basic_example/.
+The source code of the sample application is in Release-<Version>/apps/current_app/.
 
 This section explains how to start a conference and then connect to a conference using different qualifiers, such as a specific video resolution.
 

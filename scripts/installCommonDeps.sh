@@ -25,6 +25,10 @@ install_fdkaac(){
   local SRC="fdk-aac-${VERSION}.tar.gz"
   local SRC_URL="http://sourceforge.net/projects/opencore-amr/files/fdk-aac/${SRC}/download"
   local SRC_MD5SUM="13c04c5f4f13f4c7414c95d7fcdea50f"
+
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libfdk* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "fdkaac already installed." && return 0
+
   mkdir -p ${LIB_DIR}
   pushd ${LIB_DIR}
   [[ ! -s ${SRC} ]] && wget -c ${SRC_URL} -O ${SRC}
@@ -42,11 +46,15 @@ install_fdkaac(){
 }
 
 install_ffmpeg(){
-  local VERSION="4.1.1"
+  local VERSION="4.1.3"
   local DIR="ffmpeg-${VERSION}"
   local SRC="${DIR}.tar.bz2"
   local SRC_URL="http://ffmpeg.org/releases/${SRC}"
-  local SRC_MD5SUM="4a64e3cb3915a3bf71b8b60795904800"
+  local SRC_MD5SUM="9985185a8de3678e5b55b1c63276f8b5"
+
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libav* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "ffmpeg already installed." && return 0
+
   mkdir -p ${LIB_DIR}
   pushd ${LIB_DIR}
   [[ ! -s ${SRC} ]] && wget -c ${SRC_URL}
@@ -68,6 +76,10 @@ install_ffmpeg(){
 
 install_zlib() {
   local VERSION="1.2.11"
+
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libz* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "zlib already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
     pushd $LIB_DIR >/dev/null
     rm -rf zlib-*
@@ -87,6 +99,9 @@ install_zlib() {
 
 #libnice depends on zlib
 install_libnice0114(){
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libnice* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "libnice already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
     cd $LIB_DIR
     rm -f ./build/lib/libnice.*
@@ -106,6 +121,9 @@ install_libnice0114(){
 
 #libnice depends on zlib
 install_libnice014(){
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libnice* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "libnice already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
     cd $LIB_DIR
     rm -f ./build/lib/libnice.*
@@ -117,6 +135,8 @@ install_libnice014(){
     patch -p1 < $PATHNAME/patches/libnice014-agentlock-plus.patch
     patch -p1 < $PATHNAME/patches/libnice014-removecandidate.patch
     patch -p1 < $PATHNAME/patches/libnice014-keepalive.patch
+    patch -p1 < $PATHNAME/patches/libnice014-startcheck.patch
+    patch -p1 < $PATHNAME/patches/libnice014-closelock.patch
     PKG_CONFIG_PATH=$PREFIX_DIR"/lib/pkgconfig":$PREFIX_DIR"/lib64/pkgconfig":$PKG_CONFIG_PATH ./configure --prefix=$PREFIX_DIR && make -s V= && make install
     cd $CURRENT_DIR
   else
@@ -126,13 +146,17 @@ install_libnice014(){
 }
 
 install_openssl(){
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libssl* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "openssl already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
-    local SSL_VERSION="1.0.2r"
+    local SSL_BASE_VERSION="1.0.2"
+    local SSL_VERSION="1.0.2t"
     cd $LIB_DIR
     rm -f ./build/lib/libssl.*
     rm -f ./build/lib/libcrypto.*
     rm -rf openssl-1*
-    wget -c http://www.openssl.org/source/openssl-${SSL_VERSION}.tar.gz
+    wget -c http://www.openssl.org/source/old/${SSL_BASE_VERSION}/openssl-${SSL_VERSION}.tar.gz
     tar xf openssl-${SSL_VERSION}.tar.gz
     cd openssl-${SSL_VERSION}
     ./config no-ssl3 --prefix=$PREFIX_DIR -fPIC
@@ -148,6 +172,9 @@ install_openssl(){
 }
 
 install_openh264(){
+  local LIST_LIBS=`ls ${ROOT}/third_party/openh264/libopenh264* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "openh264 already installed." && return 0
+
   MAJOR=1
   MINOR=7
   SOVER=4
@@ -186,6 +213,9 @@ install_openh264(){
 }
 
 install_libexpat() {
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libexpat* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "libexpat already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
     local VERSION="2.2.6"
     local DURL="https://github.com/libexpat/libexpat/releases/download/R_2_2_6/expat-${VERSION}.tar.bz2"
@@ -205,7 +235,22 @@ install_libexpat() {
   fi
 }
 
+install_webrtc79(){
+  $INCR_INSTALL &&  [[ -s $ROOT/third_party/webrtc-m79/libwebrtc.a ]] && \
+  echo "libwebrtc already installed." && return 0
+
+  [[ ! -d $ROOT/third_party/webrtc-m79 ]] && \
+    mkdir $ROOT/third_party/webrtc-m79
+
+  pushd ${ROOT}/third_party/webrtc-m79 >/dev/null
+  . $PATHNAME/installWebrtc.sh
+  popd
+}
+
 install_webrtc(){
+  $INCR_INSTALL &&  [[ -s $ROOT/third_party/webrtc/libwebrtc.a ]] && \
+  echo "libwebrtc already installed." && return 0
+
   export GIT_SSL_NO_VERIFY=1
   local GIT_ACCOUNT="lab_webrtctest"
   local OWT_GIT_URL=`git config --get remote.origin.url`
@@ -225,24 +270,41 @@ install_webrtc(){
   ./src/tools-woogeen/install.sh
   ./src/tools-woogeen/build.sh
   popd
+
+  install_webrtc79
 }
 
 install_licode(){
-  local COMMIT="4c92ddb42ad8bd2eab4dfb39bbb49f985b454fc9" #pre-v5.1
+  $INCR_INSTALL && [[ -d ${ROOT}/third_party/licode ]] && echo "licode already installed." && return 0
+
+  local COMMIT="8b4692c88f1fc24dedad66b4f40b1f3d804b50ca" #v6
   local LINK_PATH="$ROOT/source/agent/webrtc/webrtcLib"
   pushd ${ROOT}/third_party >/dev/null
   rm -rf licode
   git clone https://github.com/lynckia/licode.git
   pushd licode >/dev/null
   git reset --hard $COMMIT
+
+  local GIT_EMAIL=`git config --get user.email`
+  local GIT_USER=`git config --get user.name`
+  [[ -z $GIT_EMAIL ]] && git config --global user.email "you@example.com"
+  [[ -z $GIT_USER ]] && git config --global user.name "Your Name"
+
   # APPLY PATCH
   git am $PATHNAME/patches/licode/*.patch
-  # Cherry-pick upstream fix - Use OpenSSL API for DTLS retransmissions (#1145)
-  # from https://github.com/lynckia/licode/commit/71b38f9bf1d582d5afb1dca8f390c281dbe8ae43
-  git cherry-pick "71b38f9bf1d582d5afb1dca8f390c281dbe8ae43"
 
   popd >/dev/null
   popd >/dev/null
+}
+
+install_quic(){
+  rm $ROOT/third_party/quic-lib -rf
+  mkdir $ROOT/third_party/quic-lib
+
+  pushd ${ROOT}/third_party/quic-lib
+  wget https://github.com/open-webrtc-toolkit/owt-deps-quic/releases/download/v0.1/dist.tgz
+  tar xzf dist.tgz
+  popd
 }
 
 install_nicer(){
@@ -259,6 +321,9 @@ install_nicer(){
 }
 
 install_libsrtp2(){
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libsrtp2* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "libsrtp2 already installed." && return 0
+
   if [ -d $LIB_DIR ]; then
     cd $LIB_DIR
     curl -o libsrtp-2.1.0.tar.gz https://codeload.github.com/cisco/libsrtp/tar.gz/v2.1.0
@@ -278,6 +343,9 @@ install_node() {
   echo -e "\x1b[32mInstalling nvm...\x1b[0m"
   NVM_DIR="${HOME}/.nvm"
 
+  $INCR_INSTALL && [[ -s "${NVM_DIR}/nvm.sh" ]] && \
+  echo "node already installed." && return 0
+
   #install nvm
   bash "${PATHNAME}/install_nvm.sh"
   #install node
@@ -288,7 +356,13 @@ install_node() {
 }
 
 install_node_tools() {
-  npm install -g --loglevel error node-gyp grunt-cli underscore jsdoc
+  if [ "${INCR_INSTALL}" == "true" ]; then
+    npm list -g node-gyp > /dev/null 2>&1
+    [ $? -eq 0 ] && echo "node tools already installed." && return 0
+  fi
+
+  check_proxy
+  npm install -g --loglevel error node-gyp@6.1.0 grunt-cli underscore jsdoc
   pushd ${ROOT} >/dev/null
   npm install nan@2.11.1
   pushd ${ROOT}/node_modules/nan >/dev/null
@@ -299,25 +373,36 @@ install_node_tools() {
 
 # libre depends on openssl
 install_libre() {
-  pushd ${ROOT}/third_party >/dev/null
-  rm -rf re
-  git clone https://github.com/creytiv/re.git
-  pushd re >/dev/null
-  git checkout v0.4.16
-  make SYSROOT_ALT=${PREFIX_DIR} RELEASE=1
-  popd >/dev/null
-  popd >/dev/null
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libre* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "libre already installed." && return 0
+
+  if [ -d $LIB_DIR ]; then
+    pushd ${LIB_DIR} >/dev/null
+    rm -rf re
+    git clone https://github.com/creytiv/re.git
+    pushd re >/dev/null
+    git checkout v0.4.16
+    make SYSROOT_ALT=${PREFIX_DIR} RELEASE=1
+    make install SYSROOT_ALT=${PREFIX_DIR} RELEASE=1 PREFIX=${PREFIX_DIR}
+    popd >/dev/null
+    popd >/dev/null
+  else
+    mkdir -p $LIB_DIR
+    install_libre
+  fi
 }
 
 install_usrsctp() {
-  local TP_DIR="${ROOT}/third_party"
-  if [ -d $TP_DIR ]; then
+  local LIST_LIBS=`ls ${PREFIX_DIR}/lib/libusrsctp* 2>/dev/null`
+  $INCR_INSTALL && [[ ! -z $LIST_LIBS ]] && echo "usrsctp already installed." && return 0
+
+  if [ -d $LIB_DIR ]; then
     local USRSCTP_VERSION="30d7f1bd0b58499e1e1f2415e84d76d951665dc8"
     local USRSCTP_FILE="${USRSCTP_VERSION}.tar.gz"
     local USRSCTP_EXTRACT="usrsctp-${USRSCTP_VERSION}"
     local USRSCTP_URL="https://github.com/sctplab/usrsctp/archive/${USRSCTP_FILE}"
 
-    cd $TP_DIR
+    cd $LIB_DIR
     rm -rf usrsctp
     wget -c ${USRSCTP_URL}
     tar -zxvf ${USRSCTP_FILE}
@@ -326,10 +411,10 @@ install_usrsctp() {
 
     cd usrsctp
     ./bootstrap
-    ./configure
-    make
+    ./configure --prefix=$PREFIX_DIR 
+    make && make install
   else
-    mkdir -p $TP_DIR
+    mkdir -p $LIB_DIR
     install_usrsctp
   fi
 }
@@ -376,22 +461,33 @@ install_gcc(){
   fi
 }
 
+install_json_hpp() {
+  if [ -d $LIB_DIR ]; then
+    local DOWNLOAD_JSON_LINK="https://github.com/nlohmann/json/releases/download/v3.6.1/json.hpp"
+    pushd $LIB_DIR >/dev/null
+    wget -c ${DOWNLOAD_JSON_LINK}
+    mkdir -p ${PREFIX_DIR}/include
+    mv json.hpp ${PREFIX_DIR}/include/
+    popd
+  else
+    mkdir -p $LIB_DIR
+    install_json_hpp
+  fi
+}
+
 install_svt_hevc(){
-    pushd $ROOT/third_party
+    pushd $ROOT/third_party >/dev/null
     rm -rf SVT-HEVC
     git clone https://github.com/intel/SVT-HEVC.git
 
-    pushd SVT-HEVC
+    pushd SVT-HEVC >/dev/null
     git checkout v1.3.0
 
-    pushd Build
-    pushd linux
-    chmod +x build.sh
-    ./build.sh debug
-    popd
-    popd
-    cp -v ./Bin/Debug/libSvtHevcEnc.so.1 ./
-    ln -s -v libSvtHevcEnc.so.1 libSvtHevcEnc.so
+    mkdir build
+    pushd build >/dev/null
+    cmake -DCMAKE_C_FLAGS="-std=gnu99" -DCMAKE_INSTALL_PREFIX=${PREFIX_DIR} ..
+    make && make install
+    popd >/dev/null
 
     # pseudo lib
     echo \
@@ -399,9 +495,8 @@ install_svt_hevc(){
         > pseudo-svtHevcEnc.cpp
     gcc pseudo-svtHevcEnc.cpp -fPIC -shared -o pseudo-svtHevcEnc.so
 
-    popd
-
-    popd
+    popd >/dev/null
+    popd >/dev/null
 }
 
 cleanup_common(){

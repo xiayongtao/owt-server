@@ -11,6 +11,7 @@ var vsprintf = require("sprintf-js").vsprintf;
 
 var LegacyClient = require('./legacyClient');
 var V10Client = require('./v10Client');
+var V11Client = require('./v11Client');
 
 function safeCall () {
   var callback = arguments[0];
@@ -115,15 +116,13 @@ var Connection = function(spec, socket, reconnectionKey, portal, dock) {
   const forceClientLeave = () => {
     log.debug('forceClientLeave, client_id:', client_id);
     if (client_id) {
-      dock.getClient(client_id)
-      .then((client) => {
-        if (client.connection === that) {
-          client.leave();
-          dock.onClientLeft(client_id);
-        }
-      });
-      state = 'initialized';
-      client_id = undefined;
+      const client = dock.getClient(client_id)
+      if (client && client.connection === that) {
+        client.leave();
+        dock.onClientLeft(client_id);
+        state = 'initialized';
+        client_id = undefined;
+      }
     }
   };
 
@@ -144,6 +143,14 @@ var Connection = function(spec, socket, reconnectionKey, portal, dock) {
       if (login_info.protocol === undefined) {
         protocol_version = 'legacy';
         client = new LegacyClient(client_id, that, portal);
+      } else if (login_info.protocol === '1.1') {
+        //FIXME: Reject connection from 3.5 client
+        if (login_info.userAgent && login_info.userAgent.sdk && login_info.userAgent.sdk.version === '3.5') {
+          safeCall(callback, 'error', 'Deprecated client version');
+          return socket.disconnect();
+        }
+        protocol_version = '1.1';
+        client = new V11Client(client_id, that, portal);
       } else if (login_info.protocol === '1.0') {
         //FIXME: Reject connection from 3.5 client
         if (login_info.userAgent && login_info.userAgent.sdk && login_info.userAgent.sdk.version === '3.5') {
@@ -211,6 +218,9 @@ var Connection = function(spec, socket, reconnectionKey, portal, dock) {
         }
       }).then((clt) => {
         client = clt;
+        if (!client) {
+          return Promise.reject('Client does NOT exist');
+        }
         return client.connection.reconnect();
       }).then((connectionInfo) => {
         if (!connectionInfo.reconnection.enabled) {
@@ -268,6 +278,7 @@ var Connection = function(spec, socket, reconnectionKey, portal, dock) {
 
       if (state === 'connected' && reconnection.enabled) {
         state = 'waiting_for_reconnecting';
+        socket.disconnect(true);
         waiting_for_reconnecting_timer = setTimeout(() => {
           log.info(client_id + ' waiting for reconnecting timeout.');
           forceClientLeave();
@@ -404,9 +415,9 @@ var SocketIOServer = function(spec, portal, observer) {
 
   that.getClient = (id) => {
     if (clients[id]) {
-      return Promise.resolve(clients[id]);
+      return clients[id];
     } else {
-      return Promise.reject('Client does NOT exist');
+      return null;
     }
   };
 

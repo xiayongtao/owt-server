@@ -10,17 +10,35 @@ var AccessController = require('./accessController');
 var RoomController = require('./roomController');
 var dataAccess = require('./data_access');
 var Participant = require('./participant');
-//var Stream = require('./stream');
 
 // Logger
 var log = logger.getLogger('Conference');
+var Stream = require('./stream');
 
-const isAudioFmtCompatible = (fmt1, fmt2) => {
+const isAudioFmtEqual = (fmt1, fmt2) => {
   return (fmt1.codec === fmt2.codec) && (fmt1.sampleRate === fmt2.sampleRate) && (fmt1.channelNum === fmt2.channelNum);
 };
 
-const isVideoFmtCompatible = (fmt1, fmt2) => {
-  return (fmt1.codec === fmt2.codec && (!fmt1.profile || !fmt2.profile || fmt1.profile === fmt2.profile));
+const isVideoFmtEqual = (fmt1, fmt2) => {
+  return (fmt1.codec === fmt2.codec) && (fmt1.profile === fmt2.profile);
+};
+
+const h264ProfileDict = {
+  'CB': 1,
+  'B': 2,
+  'M': 3,
+  'H': 4
+};
+
+const isVideoProfileCompatible = (curProfile, reqProfile) => {
+  let curP = h264ProfileDict[curProfile],
+    reqP = h264ProfileDict[reqProfile];
+
+  return !curP || !reqP || (curP <= reqP);
+};
+
+const isVideoFmtCompatible = (curFmt, reqFmt) => {
+  return (curFmt.codec === reqFmt.codec && isVideoProfileCompatible(curFmt.profile, reqFmt.profile));
 };
 
 var calcResolution = (x, baseResolution) => {
@@ -218,54 +236,7 @@ var Conference = function (rpcClient, selfRpcId) {
   var participants = {};
 
   /*
-   * {
-   *   StreamId: {
-   *     id: string(StreamId),
-   *     type: 'forward' | 'mixed',
-   *     media: {
-   *       audio: {
-   *         status: 'active' | 'inactive' | undefined,
-   *         source: 'mic' | 'screen-cast' | 'raw-file' | 'encoded-file' | 'streaming',
-   *         format: object(AudioFormat),
-   *         optional: {
-   *           format: [object(AudioFormat)] | undefined
-   *         } | undefined
-   *       } | undefined,
-   *       video: {
-   *         status: 'active' | 'inactive' | undefined,
-   *         source: 'camera' | screen-cast' | 'raw-file' | 'encoded-file' | 'streaming',
-   *         format: object(VideoFormat),
-   *         parameters: {
-   *           resolution: object(Resolution) | undefined,
-   *           framerate: number(FramerateFPS) | undefined,
-   *           bitrate: number(Kbps) | undefined,
-   *           keyFrameInterval: number(Seconds) | undefined,
-   *           } | undefined
-   *         optional: {
-   *           format: [object(VideoFormat)] | undefined,
-   *           parameters: {
-   *             resolution: [object(Resolution)] | undefined,
-   *             framerate: [number(FramerateFPS)] | undefined,
-   *             bitrate: [number(Kbps] | string('x' + Multiple) | undefined,
-   *             keyFrameRate: [number(Seconds)] | undefined
-   *           } | undefined
-   *         } | undeinfed
-   *       } | undefined
-   *     },
-   *     info: object(PublicationInfo):: {
-   *       owner: string(ParticipantId),
-   *       type: 'webrtc' | 'streaming' | 'sip',
-   *       inViews: [string(ViewLabel)],
-   *       attributes: object(ExternalDefinedObj)
-   *     } | object(ViewInfo):: {
-   *       label: string(ViewLabel),
-   *       layout: [{
-   *         stream: string(StreamId),
-   *         region: object(Region)
-   *       }]
-   *     }
-   *   }
-   * }
+   * {StreamId: object(Stream)}
    */
   var streams = {};
 
@@ -422,94 +393,12 @@ var Conference = function (rpcClient, selfRpcId) {
                       return;
                     }
 
-
-                    var default_audio_fmt = viewSettings.audio.format;
-                    var default_video_fmt = viewSettings.audio.format;
-
-                    //FIXME: Validation defaultFormat/mediaOut against av_capability here is not complete.
-                    if (viewSettings.audio) {
-                      if (viewSettings.audio.format && (av_capability.audio.findIndex((f) => isAudioFmtCompatible(viewSettings.audio.format, f)) >= 0)) {
-                        default_audio_fmt = viewSettings.audio.format;
-                      } else {
-                        for (var i in room_config.mediaOut.audio) {
-                          var fmt = room_config.mediaOut.audio[i];
-                          if (av_capability.audio.findIndex((f) => {return isAudioFmtCompatible(fmt,f);}) >= 0) {
-                            default_audio_fmt = fmt;
-                            break;
-                          }
-                        }
-                      }
-
-                      if (!default_audio_fmt) {
-                        log.error('No capable audio format for view: ' + viewSettings.label);
-                        return;
-                      }
-                    }
-
-                    if (viewSettings.video) {
-                      if (viewSettings.video.format && (av_capability.video.encode.findIndex((f) => {return isVideoFmtCompatible(viewSettings.video.format, f);}) >= 0)) {
-                        default_video_fmt = viewSettings.video.format;
-                      } else {
-                        for (var i in room_config.mediaOut.video.format) {
-                          var fmt = room_config.mediaOut.video.format[i];
-                          if (av_capability.video.encode.findIndex((f) => {return isVideoFmtCompatible(fmt,f);}) >= 0) {
-                            default_video_fmt = fmt;
-                            break;
-                          }
-                        }
-                      }
-
-                      if (!default_video_fmt) {
-                        log.error('No capable video format for view: ' + viewSettings.label);
-                        return;
-                      }
-                    }
-
-                    var mixed_stream_info = {
-                      id: mixed_stream_id,
-                      type: 'mixed',
-                      media: {
-                        audio: (viewSettings.audio) ? {
-                          format: default_audio_fmt,
-                          optional: {
-                            format: room_config.mediaOut.audio.filter((fmt) => {
-                              return (av_capability.audio.findIndex((f) => isAudioFmtCompatible(f, fmt)) >= 0
-                                && !isAudioFmtCompatible(fmt, default_audio_fmt));
-                            })
-                          }
-                        } : undefined,
-                        video: (viewSettings.video) ? {
-                          format: default_video_fmt,
-                          optional: {
-                            format: room_config.mediaOut.video.format.filter((fmt) => {
-                              return (av_capability.video.encode.findIndex((f) => isVideoFmtCompatible(f, fmt)) >= 0
-                                && !isVideoFmtCompatible(fmt, default_video_fmt));
-                            }),
-                            parameters: {
-                              resolution: room_config.mediaOut.video.parameters.resolution.map((x) => {return calcResolution(x, viewSettings.video.parameters.resolution)}).filter((reso, pos, self) => {return ((reso.width < viewSettings.video.parameters.resolution.width) && (reso.height < viewSettings.video.parameters.resolution.height)) && (self.findIndex((r) => {return r.width === reso.width && r.height === reso.height;}) === pos);}),
-                              framerate: room_config.mediaOut.video.parameters.framerate.filter((x) => {return x < viewSettings.video.parameters.framerate;}),
-                              bitrate: room_config.mediaOut.video.parameters.bitrate,//.map((x) => {return calcBitrate(x, viewSettings.video.parameters.bitrate)}),
-                              keyFrameInterval: room_config.mediaOut.video.parameters.keyFrameInterval.filter((x) => {return x < viewSettings.video.parameters.keyFrameInterval;})
-                            }
-                          },
-                          parameters: {
-                            resolution: viewSettings.video.parameters.resolution,
-                            framerate: viewSettings.video.parameters.framerate,
-                            bitrate: viewSettings.video.parameters.bitrate,
-                            keyFrameInterval: viewSettings.video.parameters.keyFrameInterval,
-                          }
-                        } : undefined
-                      },
-                      info: {
-                        label: viewSettings.label,
-                        activeInput: 'unknown',
-                        layout: []
-                      }
-                    };
+                    var mixed_stream_info = Stream.createMixStream(room_id, viewSettings, room_config.mediaOut, av_capability);
 
                     streams[mixed_stream_id] = mixed_stream_info;
                     log.debug('Mixed stream info:', mixed_stream_info);
-                    room_config.notifying.streamChange && sendMsg('room', 'all', 'stream', {id: mixed_stream_id, status: 'add', data: mixed_stream_info});
+                    room_config.notifying.streamChange &&
+                      sendMsg('room', 'all', 'stream', {id: mixed_stream_id, status: 'add', data: Stream.toPortalFormat(mixed_stream_info)});
                   });
 
                   participants['admin'] = Participant({
@@ -553,21 +442,7 @@ var Conference = function (rpcClient, selfRpcId) {
   };
 
   var destroyRoom = function() {
-    var exit_delay = 0;
-    if (room_id) {
-      if (Object.keys(streams).length > 0 || Object.keys(subscriptions).length > 0) {
-        exit_delay = 1000;
-      }
-
-      for (var pid in participants) {
-        if (pid !== 'admin') {
-          accessController && accessController.participantLeave(pid);
-          removeParticipant(pid);
-        }
-      }
-      accessController && accessController.participantLeave('admin');
-      removeParticipant('admin');
-
+    const doClean = () => {
       accessController && accessController.destroy();
       accessController = undefined;
       roomController && roomController.destroy();
@@ -576,8 +451,21 @@ var Conference = function (rpcClient, selfRpcId) {
       streams = {};
       participants = {};
       room_id = undefined;
+    };
+
+    var pl = [];
+    for (var pid in participants) {
+      if (pid !== 'admin' && accessController) {
+        pl.push(accessController.participantLeave(pid));
+      }
     }
-    setTimeout(() => {process.exit();}, exit_delay);
+    accessController && pl.push(accessController.participantLeave('admin'));
+
+    return Promise.all(pl)
+      .then(() => {
+        doClean();
+        process.exit();
+      });
   };
 
   const sendMsgTo = function(to, msg, data) {
@@ -667,100 +555,6 @@ var Conference = function (rpcClient, selfRpcId) {
     return result;
   };
 
-  const constructMediaInfo = (media) => {
-    var result = {};
-
-    if (media.audio) {
-      result.audio = {
-        status: 'active',
-        format: extractAudioFormat(media.audio)
-      };
-
-      media.audio.source && (result.audio.source = media.audio.source);
-
-      if (room_config.transcoding.audio) {
-        result.audio.optional = {format: []};
-        room_config.mediaOut.audio.forEach((fmt) => {
-          if ((fmt.codec !== result.audio.format.codec)
-              || (fmt.sampleRate !== result.audio.format.sampleRate)
-              || (fmt.channelNum !== result.audio.format.channelNum)) {
-            result.audio.optional.format.push(fmt);
-          }
-        });
-      }
-    }
-
-    if (media.video) {
-      result.video = {
-        status: 'active',
-        format: extractVideoFormat(media.video)
-      };
-
-      //FIXME: sometimes, streaming send invalid resolution { width: 0, height: 0}
-      if (media.video.resolution && (!media.video.resolution.height && !media.video.resolution.width)) {
-        delete media.video.resolution;
-      }
-
-      media.video.source && (result.video.source = media.video.source);
-      media.video.resolution && (media.video.resolution.width !== 0) && (media.video.resolution.height !== 0) && (result.video.parameters || (result.video.parameters = {})) && (result.video.parameters.resolution = media.video.resolution);
-      media.video.framerate && (media.video.framerate !== 0) && (result.video.parameters || (result.video.parameters = {})) && (result.video.parameters.framerate = Math.floor(media.video.framerate));
-      media.video.bitrate && (result.video.parameters || (result.video.parameters = {})) && (result.video.parameters.bitrate = media.video.bitrate);
-      media.video.keyFrameInterval && (result.video.parameters || (result.video.parameters = {})) && (result.video.parameters.keyFrameInterval = media.video.keyFrameInterval);
-
-      if (room_config.transcoding.video && room_config.transcoding.video.format) {
-        result.video.optional = {format: []};
-        room_config.mediaOut.video.format.forEach((fmt) => {
-          if ((fmt.codec !== result.video.format.codec)
-              || (fmt.profile !== result.video.format.profile)) {
-            result.video.optional.format.push(fmt);
-          }
-        });
-      }
-
-      if (room_config.transcoding.video && room_config.transcoding.video.parameters) {
-        if (room_config.transcoding.video.parameters.resolution) {
-          result.video.optional = (result.video.optional || {});
-          result.video.optional.parameters = (result.video.optional.parameters || {});
-
-          if (result.video.parameters && result.video.parameters.resolution) {
-            result.video.optional.parameters.resolution = room_config.mediaOut.video.parameters.resolution.map((x) => {return calcResolution(x, result.video.parameters.resolution)}).filter((reso, pos, self) => {return ((reso.width < result.video.parameters.resolution.width) && (reso.height < result.video.parameters.resolution.height)) && (self.findIndex((r) => {return r.width === reso.width && r.height === reso.height;}) === pos);});
-          } else {
-            result.video.optional.parameters.resolution = room_config.mediaOut.video.parameters.resolution
-              .filter((x) => {return (x !== 'x3/4') && (x !== 'x2/3') && (x !== 'x1/2') && (x !== 'x1/3') && (x !== 'x1/4');})//FIXME: is auto-scaling possible?
-              .map((x) => {return calcResolution(x)});
-          }
-        }
-
-        if (room_config.transcoding.video.parameters.framerate) {
-          result.video.optional = (result.video.optional || {});
-          result.video.optional.parameters = (result.video.optional.parameters || {});
-
-          if (result.video.parameters && result.video.parameters.framerate) {
-            result.video.optional.parameters.framerate = room_config.mediaOut.video.parameters.framerate.filter((fr) => {return fr < result.video.parameters.framerate;});
-          } else {
-            result.video.optional.parameters.framerate = room_config.mediaOut.video.parameters.framerate;
-          }
-        }
-
-        if (room_config.transcoding.video.parameters.bitrate) {
-          result.video.optional = (result.video.optional || {});
-          result.video.optional.parameters = (result.video.optional.parameters || {});
-
-          result.video.optional.parameters.bitrate = room_config.mediaOut.video.parameters.bitrate.filter((x) => {return Number(x.substring(1)) < 1;});
-        }
-
-        if (room_config.transcoding.video.parameters.keyFrameInterval) {
-          result.video.optional = (result.video.optional || {});
-          result.video.optional.parameters = (result.video.optional.parameters || {});
-
-          result.video.optional.parameters.keyFrameInterval = room_config.mediaOut.video.parameters.keyFrameInterval;
-        }
-      }
-    }
-
-    return result;
-  };
-
   const initiateStream = (id, info) => {
     if (streams[id]) {
       return Promise.reject('Stream already exists');
@@ -778,7 +572,7 @@ var Conference = function (rpcClient, selfRpcId) {
 
   const isAudioFmtAcceptable = (audioIn, audioInList) => {
     for (var i in audioInList) {
-      if (isAudioFmtCompatible(audioIn, audioInList[i])) {
+      if (isAudioFmtEqual(audioIn, audioInList[i])) {
         return true;
       }
     }
@@ -803,20 +597,20 @@ var Conference = function (rpcClient, selfRpcId) {
       return Promise.reject('Video format unacceptable');
     }
 
+    var isReadded = !!(streams[id] && !streams[id].isInConnecting);
+
     return new Promise((resolve, reject) => {
       roomController && roomController.publish(info.owner, id, locality, media, info.type, function() {
         if (participants[info.owner]) {
-          var st = {
-            id: id,
-            type: 'forward',
-            media: constructMediaInfo(media),
-            info: info
-          };
+          var st = Stream.createForwardStream(id, media, info, room_config);
           st.info.inViews = [];
           streams[id] = st;
-          setTimeout(() => {
-            room_config.notifying.streamChange && sendMsg('room', 'all', 'stream', {id: id, status: 'add', data: st});
-          }, 10);
+          if (!isReadded) {
+            setTimeout(() => {
+              room_config.notifying.streamChange &&
+                sendMsg('room', 'all', 'stream', {id: id, status: 'add', data: Stream.toPortalFormat(st)});
+            }, 10);
+          }
           resolve('ok');
         } else {
           roomController && roomController.unpublish(info.owner, id);
@@ -829,28 +623,9 @@ var Conference = function (rpcClient, selfRpcId) {
   };
 
   const updateStreamInfo = (streamId, info) => {
-    if (streams[streamId] && streams[streamId].type === 'forward') {
-      if (info) {
-        if (info.video && streams[streamId].media.video) {
-          if (info.video.parameters) {
-            if (info.video.parameters.resolution) {
-              streams[streamId].media.video.parameters = (streams[streamId].media.video.parameters || {});
-              if (!streams[streamId].media.video.parameters.resolution ||
-                  (streams[streamId].media.video.parameters.resolution.width !== info.video.parameters.resolution.width) ||
-                  (streams[streamId].media.video.parameters.resolution.height !== info.video.parameters.resolution.height)) {
-                streams[streamId].media.video.parameters.resolution = info.video.parameters.resolution;
-                if (room_config.transcoding.video && room_config.transcoding.video.parameters && room_config.transcoding.video.parameters.resolution) {
-                  streams[streamId].media.video.optional = (streams[streamId].media.video.optional || {});
-                  streams[streamId].media.video.optional.parameters = (streams[streamId].media.video.optional.parameters || {});
-
-                  streams[streamId].media.video.optional.parameters.resolution = room_config.mediaOut.video.parameters.resolution.map((x) => {return calcResolution(x, streams[streamId].media.video.parameters.resolution)}).filter((reso, pos, self) => {return ((reso.width < streams[streamId].media.video.parameters.resolution.width) && (reso.height < streams[streamId].media.video.parameters.resolution.height)) && (self.findIndex((r) => {return r.width === reso.width && r.height === reso.height;}) === pos);});
-                }
-              }
-            }
-          }
-          room_config.notifying.streamChange && sendMsg('room', 'all', 'stream', {id: streamId, status: 'update', data: {field: '.', value: streams[streamId]}});
-        }
-      }
+    if (Stream.updateForwardStream(streams[streamId], info, room_config)) {
+      room_config.notifying.streamChange &&
+        sendMsg('room', 'all', 'stream', {id: streamId, status: 'update', data: {field: '.', value: Stream.toPortalFormat(streams[streamId])}});
     }
   };
 
@@ -943,12 +718,12 @@ var Conference = function (rpcClient, selfRpcId) {
               media.video.parameters.bitrate = 'unspecified';
             }
           } else {
-            media.video.parameters.bitrate = (media.video.parameters.bitrate || (source.parameters && source.parameters.bitrate) || 'unspecified');
+            media.video.parameters.bitrate = (media.video.parameters.bitrate || 'unspecified');
           }
 
-          media.video.parameters.resolution = (media.video.parameters.resolution || (source.parameters && source.parameters.resolution) || 'unspecified');
-          media.video.parameters.framerate = (media.video.parameters.framerate || (source.parameters && source.parameters.framerate) || 'unspecified');
-          media.video.parameters.keyFrameInterval = (media.video.parameters.keyFrameInterval || (source.parameters && source.parameters.keyFrameInterval) || 'unspecified');
+          media.video.parameters.resolution = (media.video.parameters.resolution || 'unspecified');
+          media.video.parameters.framerate = (media.video.parameters.framerate || 'unspecified');
+          media.video.parameters.keyFrameInterval = (media.video.parameters.keyFrameInterval || 'unspecified');
         } else {
           media.video.parameters = {
             resolution: 'unspecified',
@@ -1031,31 +806,35 @@ var Conference = function (rpcClient, selfRpcId) {
     }
   };
 
-  const selfClean = () => {
-    setTimeout(function() {
-      var hasNonAdminParticipant = false,
-        hasPublication = false,
-        hasSubscription = false;
+  const roomIsIdle = () => {
+    var hasNonAdminParticipant = false,
+      hasPublication = false,
+      hasSubscription = false;
 
-      for (let k in participants) {
-        if (k !== 'admin') {
-          hasNonAdminParticipant = true;
+    for (let k in participants) {
+      if (k !== 'admin') {
+        hasNonAdminParticipant = true;
+        break;
+      }
+    };
+
+    if (!hasNonAdminParticipant) {
+      for (let st in streams) {
+        if (streams[st].type === 'forward') {
+          hasPublication = true;
           break;
         }
-      };
-
-      if (!hasNonAdminParticipant) {
-        for (let st in streams) {
-          if (streams[st].type === 'forward') {
-            hasPublication = true;
-            break;
-          }
-        }
       }
+    }
 
-      hasSubscription = (Object.keys(subscriptions).length > 0);
+    hasSubscription = (Object.keys(subscriptions).length > 0);
 
-      if (!hasNonAdminParticipant && !hasPublication && !hasSubscription) {
+    return (!hasNonAdminParticipant && !hasPublication && !hasSubscription);
+  };
+
+  const selfClean = () => {
+    setTimeout(function() {
+      if (roomIsIdle()) {
         log.info('Empty room ', room_id, '. Deleting it');
         destroyRoom();
       }
@@ -1105,7 +884,7 @@ var Conference = function (rpcClient, selfRpcId) {
 
         for (var stream_id in streams) {
           if (!streams[stream_id].isInConnecting) {
-            current_streams.push(streams[stream_id]);
+            current_streams.push(Stream.toPortalFormat(streams[stream_id]));
           }
         }
 
@@ -1178,7 +957,7 @@ var Conference = function (rpcClient, selfRpcId) {
       return callback('callback', 'error', 'Too many inputs');
     }
 
-    if (streams[streamId]) {
+    if (streams[streamId] && (pubInfo.type !== 'analytics')) {
       return callback('callback', 'error', 'Stream exists');
     }
 
@@ -1258,10 +1037,10 @@ var Conference = function (rpcClient, selfRpcId) {
 
   const isAudioFmtAvailable = (streamAudio, fmt) => {
     //log.debug('streamAudio:', JSON.stringify(streamAudio), 'fmt:', fmt);
-    if (isAudioFmtCompatible(streamAudio.format, fmt)) {
+    if (isAudioFmtEqual(streamAudio.format, fmt)) {
       return true;
     }
-    if (streamAudio.optional && streamAudio.optional.format && (streamAudio.optional.format.findIndex((f) => {return isAudioFmtCompatible(f, fmt);}) >= 0)) {
+    if (streamAudio.optional && streamAudio.optional.format && (streamAudio.optional.format.findIndex((f) => {return isAudioFmtEqual(f, fmt);}) >= 0)) {
       return true;
     }
     return false;
@@ -1305,6 +1084,14 @@ var Conference = function (rpcClient, selfRpcId) {
     if (streamVideo.optional && streamVideo.optional.parameters && streamVideo.optional.parameters.resolution && (streamVideo.optional.parameters.resolution.findIndex((r) => {return isResolutionEqual(r, resolution);}) >= 0)) {
       return true;
     }
+    if (streamVideo.alternative) {
+      for (const alt of streamVideo.alternative) {
+        if (alt.parameters && alt.parameters.resolution &&
+            isResolutionEqual(alt.parameters.resolution, resolution)) {
+          return true;
+        }
+      }
+    }
     return false;
   };
 
@@ -1346,7 +1133,23 @@ var Conference = function (rpcClient, selfRpcId) {
       return false;
     }
 
-    if (req.parameters) {
+    if (req.simulcastRid) {
+      let findRid = false;
+      if (streams[req.from].media.video.rid === req.simulcastRid) {
+        findRid = true;
+      }
+      if (streams[req.from].media.video.alternative) {
+        streams[req.from].media.video.alternative.forEach((item) => {
+          if (item.rid === req.simulcastRid) {
+            findRid = true;
+          }
+        });
+      }
+      if (!findRid) {
+        err && (err.message = 'Simulcast RID is not acceptable');
+        return false;
+      }
+    } else if (req.parameters) {
       if (req.parameters.resolution && !isResolutionAvailable(streams[req.from].media.video, req.parameters.resolution)) {
         err && (err.message = 'Resolution is not acceptable');
         return false;
@@ -1847,7 +1650,7 @@ var Conference = function (rpcClient, selfRpcId) {
   };
 
   that.onMediaUpdate = (sessionId, direction, mediaUpdate) => {
-    log.debug('onMediaUpdate, sessionId:', sessionId, 'direction:', direction, 'mediaUpdate:', mediaUpdate);
+    log.debug('onMediaUpdate, sessionId:', sessionId, 'direction:', direction, 'mediaUpdate:', JSON.stringify(mediaUpdate));
     if (direction === 'in' && streams[sessionId] && (streams[sessionId].type === 'forward')) {
       updateStreamInfo(sessionId, mediaUpdate);
       roomController && roomController.updateStreamInfo(sessionId, mediaUpdate);
@@ -1968,7 +1771,7 @@ var Conference = function (rpcClient, selfRpcId) {
     var result = [];
     for (var stream_id in streams) {
       if (!streams[stream_id].isInConnecting) {
-        result.push(streams[stream_id]);
+        result.push(Stream.toPortalFormat(streams[stream_id]));
       }
     }
     callback('callback', result);
@@ -2026,7 +1829,7 @@ var Conference = function (rpcClient, selfRpcId) {
           }, 60);
         });
       }).then(() => {
-        callback('callback', streams[stream_id]);
+        callback('callback', Stream.toPortalFormat(streams[stream_id]));
       }).catch((e) => {
         callback('callback', 'error', e.message ? e.message : e);
         removeStream(stream_id);
@@ -2209,7 +2012,7 @@ var Conference = function (rpcClient, selfRpcId) {
     ).then(() => {
       return Promise.all(muteReq.map((r) => {return setStreamMute(streamId, r.track, r.mute);}));
     }).then(() => {
-      callback('callback', streams[streamId]);
+      callback('callback', Stream.toPortalFormat(streams[streamId]));
     }, (err) => {
       log.warn('failed in controlStream, reason:', err.message ? err.message : err);
       callback('callback', 'error', err.message ? err.message : err);
@@ -2345,14 +2148,12 @@ var Conference = function (rpcClient, selfRpcId) {
             // We don't analyze audio so far
             delete subDesc.media.audio;
           }
-
           if (!subDesc.media.video || !subDesc.media.video.from) {
             return Promise.reject('Video source not specified for analyzing');
           }
           if (!streams[subDesc.media.video.from]) {
             return Promise.reject('Video source not valid for analyzing');
           }
-
           let sourceVideoOption = streams[subDesc.media.video.from].media.video;
           if (!subDesc.media.video.format) {
             // Subscribe source format
@@ -2360,9 +2161,16 @@ var Conference = function (rpcClient, selfRpcId) {
           }
           if (subDesc.media.video.parameters || sourceVideoOption.parameters) {
             subDesc.media.video.parameters = Object.assign(
-              sourceVideoOption.parameters || {},
+              {}, sourceVideoOption.parameters || {},
               subDesc.media.video.parameters || {});
           }
+          // Put output settings in connection.video to avoid external transcoding
+          subDesc.connection.video = {
+            format: subDesc.media.video.format,
+            parameters: subDesc.media.video.parameters
+          };
+          subDesc.media.video.format = sourceVideoOption.format;
+          delete subDesc.media.video.parameters;
         }
 
         // Schedule preference for worker node
@@ -2546,12 +2354,25 @@ var Conference = function (rpcClient, selfRpcId) {
 
   that.getSipCalls = function(callback) {
     var result = [];
+    log.debug('getSipCalls: ' , participants );
     for (var pid in participants) {
       if (participants[pid].getInfo().role === 'sip') {
         result.push(getSipCallInfo(pid));
       }
     }
     callback('callback', result);
+  };
+
+  that.getSipCall = function(participantId, callback) {
+    if (participants[participantId]) {
+      if (participants[participantId].getInfo().role === 'sip') {
+        callback('callback', getSipCallInfo(participantId));
+      } else {
+        callback('callback', 'error', 'Not a sip call');
+      }
+    } else {
+      callback('callback', 'error', 'Sip call does NOT exist');
+    }
   };
 
   that.makeSipCall = function(roomId, options, callback) {
@@ -2707,6 +2528,7 @@ module.exports = function (rpcClient, selfRpcId, parentRpcId, clusterWorkerIP) {
     controlSubscription: conference.controlSubscription,
     deleteSubscription: conference.deleteSubscription,
     getSipCalls: conference.getSipCalls,
+    getSipCall: conference.getSipCall,
     makeSipCall: conference.makeSipCall,
     controlSipCall: conference.controlSipCall,
     endSipCall: conference.endSipCall,

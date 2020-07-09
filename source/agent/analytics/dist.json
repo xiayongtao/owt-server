@@ -24,6 +24,7 @@
             "../../common/makeRPC.js",
             "../../common/rpcChannel.js",
             "../../common/mediaUtil.js",
+            "../../../scripts/release/install_ffmpeg.sh",
             "../../../scripts/release/initauth.js",
             "../../../scripts/release/initcert.js",
             "../../../scripts/detectOS.sh"
@@ -59,6 +60,10 @@
             {
                 "folder": "../addons/logger",
                 "name": "logger"
+            },
+            {
+                "folder": "../addons/quicIO",
+                "name": "quicIO"
             }
         ]
     },

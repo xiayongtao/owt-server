@@ -492,15 +492,18 @@ Streams model:
     {
         status: "active" | "inactive", // For forward stream
         source: "camera" | screen-cast" | "raw-file" | "encoded-file" | "streaming", // For forward stream
-        format: object(VideoFormat),
-        parameters: {
+        original: [{
+          format: object(VideoFormat),
+          parameters: {
             resolution: object(Resolution),     // Optional
             framerate: number(FramerateFPS),    // Optional
-            bitrate: number(Kbps), // Optional
+            bitrate: number(Kbps),              // Optional
             keyFrameInterval: number(Seconds),  // Optional
-        },
-        optional: {
-          format: [object(VideoFormat)]
+          },
+          simulcastRid: string(SimulcastRid)    // Optional
+        }],
+        optional: {                             // Not available for simulcast streams
+          format: [object(VideoFormat)],
           parameters: {
             resolution: [object(Resolution)],
             framerate: [number(FramerateFPS)],
@@ -539,11 +542,11 @@ Streams model:
     }
 Resources:
 
-- /v1/rooms/{roomId}/streams
-- /v1/rooms/{roomId}/streams/{streamId}
+- /v1.1/rooms/{roomId}/streams
+- /v1.1/rooms/{roomId}/streams/{streamId}
 
 ### List Streams {#RESTAPIsection5_3_1}
-**GET ${host}/v1/rooms/{roomId}/streams**
+**GET ${host}/v1.1/rooms/{roomId}/streams**
 
 Description:<br>
 List streams in the specified room.<br>
@@ -559,7 +562,7 @@ response body:
 |      json     | [ Object(StreamInfo) ] |
 
 ### Get Stream {#RESTAPIsection5_3_2}
-**GET ${host}/v1/rooms/{roomId}/streams/{streamId}**
+**GET ${host}/v1.1/rooms/{roomId}/streams/{streamId}**
 
 Description:<br>
 Get a stream's information from the specified room.<br>
@@ -575,7 +578,7 @@ response body:
 |      json     | object(StreamInfo) |
 
 ### Update Stream {#RESTAPIsection5_3_3}
-**PATCH ${host}/v1/rooms/{roomId}/streams/{streamId}**
+**PATCH ${host}/v1.1/rooms/{roomId}/streams/{streamId}**
 
 Description:<br>
 Update a stream's given attributes in the specified room.<br>
@@ -634,7 +637,7 @@ response body:
 
 
 ### Drop Stream {#RESTAPIsection5_3_4}
-**DELETE ${host}/v1/rooms/{roomId}/streams/{streamId}**
+**DELETE ${host}/v1.1/rooms/{roomId}/streams/{streamId}**
 
 Description:<br>
 Delete the specified stream from the specified room.<br>
@@ -654,11 +657,11 @@ Streaming-ins model is same as Stream model.
 
 Resources:
 
-- /v1/rooms/{roomId}/streaming-ins
-- /v1/rooms/{roomId}/streaming-ins/{streamId}
+- /v1.1/rooms/{roomId}/streaming-ins
+- /v1.1/rooms/{roomId}/streaming-ins/{streamId}
 
 ### Start Streaming-in {#RESTAPIsection5_4_1}
-**POST ${host}/v1/rooms/{roomId}/streaming-ins**
+**POST ${host}/v1.1/rooms/{roomId}/streaming-ins**
 
 Description:<br>
 Add an external RTSP/RTMP stream to the specified room.<br>
@@ -690,7 +693,7 @@ response body:
 |  json | object(StreamInfo) |
 
 ### Stop Streaming-in {#RESTAPIsection5_4_2}
-**DELETE ${host}/v1/rooms/{roomId}/streaming-ins/{streamId}**
+**DELETE ${host}/v1.1/rooms/{roomId}/streaming-ins/{streamId}**
 
 Description:<br>
 Stop the specified external streaming-in in the specified room.<br>

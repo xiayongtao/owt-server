@@ -5,6 +5,7 @@
 
 // building script
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { chdir, cwd } = process;
 const { execSync } = require('child_process');
@@ -18,6 +19,7 @@ optParser.addOption('d', 'debug', 'boolean', 'Whether build debug addon (Please 
 optParser.addOption('v', 'verbose', 'boolean', 'Whether use verbose level in building');
 optParser.addOption('r', 'rebuild', 'boolean', 'Whether clean before build');
 optParser.addOption('c', 'check', 'boolean', 'Whether check after build');
+optParser.addOption('j', 'jobs', 'string', 'Number of concurrent build jobs');
 
 const options = optParser.parseArgs(process.argv);
 
@@ -28,6 +30,7 @@ const originCwd = cwd();
 // Detect OS script
 const osScript = path.join(rootDir, 'scripts/detectOS.sh');
 const osType = execSync(`. ${osScript}`).toString().toLowerCase();
+const msdkDir = '/opt/intel/mediasdk';
 
 function getTargets() {
   var buildSet = new Set();
@@ -95,10 +98,11 @@ function constructBuildEnv() {
 }
 
 // Common build commands
+var cpuCount = (Number(options.jobs) || os.cpus().length);
 logLevel = options.verbose ? 'verbose' : 'error';
-rebuildArgs = ['node-gyp', 'rebuild', '-j 8', '--loglevel=' + logLevel];
+rebuildArgs = ['node-gyp', 'rebuild', `-j ${cpuCount}`, '--loglevel=' + logLevel];
 configureArgs = ['node-gyp', 'configure', '--loglevel=' + logLevel];
-buildArgs = ['node-gyp', 'build', '-j 8', '--loglevel=' + logLevel];
+buildArgs = ['node-gyp', 'build', `-j ${cpuCount}`, '--loglevel=' + logLevel];
 
 if (options.debug) {
   rebuildArgs.push('--debug');
@@ -150,6 +154,10 @@ for (const name of buildList) {
   console.log('', name, '');
 }
 var works = buildList.map((name) => {
+  if (name.indexOf('msdk') > 0 && !fs.existsSync(msdkDir)) {
+    console.log(`\x1b[33mSkip: ${name} - MSDK not installed\x1b[0m`);
+    return Promise.resolve();
+  }
   return buildTarget(name);
 });
 

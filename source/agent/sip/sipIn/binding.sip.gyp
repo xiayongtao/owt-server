@@ -5,38 +5,24 @@
       'addon.cc',
       'SipGateway.cc',
       'SipCallConnection.cpp',
-      'AudioFrameConstructorWrapper.cc',
-      'AudioFramePacketizerWrapper.cc',
-      'VideoFrameConstructorWrapper.cc',
-      'VideoFramePacketizerWrapper.cc',
       '../../addons/common/NodeEventRegistry.cc',
-      '../../../core/owt_base/AudioFrameConstructor.cpp',
-      '../../../core/owt_base/AudioFramePacketizer.cpp',
-      '../../../core/owt_base/AudioUtilities.cpp',
-      '../../../core/owt_base/MediaFramePipeline.cpp',
-      '../../../core/owt_base/VideoFrameConstructor.cpp',
-      '../../../core/owt_base/VideoFramePacketizer.cpp',
-      '../../../core/owt_base/SsrcGenerator.cc',
-      '../../../core/rtc_adapter/VieReceiver.cc',
-      '../../../core/rtc_adapter/VieRemb.cc' #20150508
+      '../../../core/common/JobTimer.cpp',
     ],
     'dependencies': ['sipLib'],
     'cflags_cc': ['-DWEBRTC_POSIX', '-DWEBRTC_LINUX'],
     'include_dirs': [
+      "<!(node -e \"require('nan')\")",
       '../../../core/common',
       '../../../core/owt_base',
-      '../../../core/rtc_adapter',
       '../../../../third_party/licode/erizo/src/erizo',
-      '../../../../third_party/webrtc/src',
     ],
     'libraries': [
-      '-L$(CORE_HOME)/../../third_party/webrtc', '-lwebrtc',
       '-llog4cxx',
       '-lboost_thread',
       '-lboost_system',
       # Add following arguments to help ldd find libraries during packing
-      '-L$(CORE_HOME)/../../third_party/re', '-lre',
-      '-Wl,-rpath,$(CORE_HOME)/../../third_party/re',
+      '-L$(CORE_HOME)/../../build/libdeps/build/lib',
+      '-lre',
       '-Wl,-rpath,<!(pwd)/build/$(BUILDTYPE)',
     ],
     'conditions': [
@@ -70,12 +56,11 @@
         '$(CORE_HOME)/common',
         '../../../../third_party/licode/erizo/src/erizo',
         '$(CORE_HOME)/../../build/libdeps/build/include',
-        '$(CORE_HOME)/../../third_party/re/include',
     ],
     'libraries': [
         '-L<!(pwd)/sip_gateway/sipua', '-lsipua',
         '-L$(CORE_HOME)/../../build/libdeps/build/lib',
-        '-L$(CORE_HOME)/../../third_party/re', '-lre',
+        '-lre',
         '-llog4cxx',
         '-lboost_thread',
         '-lboost_system',
@@ -103,7 +88,7 @@
         'outputs': [
           '<!(pwd)/sip_gateway/sipua/libsipua.a'
         ],
-        'action': ['eval', 'cd <!(pwd)/sip_gateway/sipua && make clean && make'],
+        'action': ['eval', 'cd <!(pwd)/sip_gateway/sipua && make clean && make RE_HOME=$(CORE_HOME)/../../build/libdeps/build'],
       }
     ]
   },

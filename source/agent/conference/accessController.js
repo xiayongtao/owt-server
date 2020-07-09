@@ -34,19 +34,21 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
   //Should terminateSession always succeed?
   const terminateSession = (sessionId) => {
     var session = sessions[sessionId];
-    if (session.state === 'connecting' || session.state === 'connected') {
-      rpcReq.terminate(session.locality.node, sessionId, session.direction)
+    if (session && session.state === 'connecting' || session.state === 'connected') {
+      return rpcReq.terminate(session.locality.node, sessionId, session.direction)
         .then(function() {
           log.debug('to recycleWorkerNode:', session.locality, 'task:', sessionId);
           return rpcReq.recycleWorkerNode(session.locality.agent, session.locality.node, {room: in_room, task: sessionId})
+        }).then(function() {
+          delete sessions[sessionId];
         })
         .catch(function(reason) {
           log.debug('AccessNode not recycled', session.locality);
         });
-      session.state = 'initialized';
+    } else {
+      delete sessions[sessionId];
+      return Promise.resolve('ok');
     }
-
-    delete sessions[sessionId];
   };
 
   const isImpacted = (locality, type, id) => {
@@ -55,12 +57,13 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
 
   const onReady = (sessionId, status) => {
     var audio = status.audio, video = status.video;
+    var simulcast = status.simulcast;
     var session = sessions[sessionId];
 
     if (session.options.type === 'webrtc') {
       if (!!session.options.media.audio && !audio) {
         var owner = session.owner, direction = session.direction;
-        terminateSession(sessionId);
+        terminateSession(sessionId).catch((whatever) => {});
         on_session_aborted(owner, sessionId, direction, 'No proper audio codec');
         log.error('No proper audio codec');
         return;
@@ -68,7 +71,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
 
       if (!!session.options.media.video && !video) {
         var owner = session.owner, direction = session.direction;
-        terminateSession(sessionId);
+        terminateSession(sessionId).catch((whatever) => {});
         on_session_aborted(owner, sessionId, direction, 'No proper video codec');
         log.error('No proper video codec');
         return;
@@ -86,6 +89,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
       media.video && session.options.media.video && session.options.media.video.parameters && session.options.media.video.parameters.resolution && (media.video.resolution = session.options.media.video.parameters.resolution);
       media.video && session.options.media.video && session.options.media.video.parameters && session.options.media.video.parameters.framerate && (media.video.framerate = session.options.media.video.parameters.framerate);
 
+      simulcast && simulcast.video && (media.video.simulcast = true);
       session.options.attributes && (info.attributes = session.options.attributes);
     } else {
       if (session.options.media.audio) {
@@ -99,6 +103,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
         session.options.media.video.format && (media.video.format = session.options.media.video.format);
         (session.options.type === 'webrtc') && (media.video.format = video);
         session.options.media.video.parameters && (media.video.parameters = session.options.media.video.parameters);
+        session.options.media.video.simulcastRid && (media.video.simulcastRid = session.options.media.video.simulcastRid);
       }
 
       if (session.options.type === 'recording') {
@@ -127,7 +132,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
     log.info('onFailed, sessionId:', sessionId, 'reason:', reason);
     var owner = sessions[sessionId].owner,
         direction = sessions[sessionId].direction;
-    terminateSession(sessionId);
+    terminateSession(sessionId).catch((whatever) => {});
     on_session_aborted(owner, sessionId, direction, reason);
   };
 
@@ -166,21 +171,22 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
 
     return rpcReq.onSessionSignaling(sessions[sessionId].locality.node, sessionId, signaling)
       .catch((e) => {
-        terminateSession(sessionId);
+        terminateSession(sessionId).catch((whatever) => {});
         return Promise.reject(e.message ? e.message : e);
       });
   };
 
   that.participantLeave = function(participantId) {
     log.debug('participantLeave, participantId:', participantId);
+    var pl = [];
     for (var session_id in sessions) {
       if (sessions[session_id].owner === participantId) {
         var direction = sessions[session_id].direction;
-        terminateSession(session_id);
+        pl.push(terminateSession(session_id));
         on_session_aborted(participantId, session_id, direction, 'Participant leave');
       }
     }
-    return Promise.resolve('ok');
+    return Promise.all(pl);
   };
 
   that.initiate = (participantId, sessionId, direction, origin, sessionOptions, formatPreference) => {
@@ -192,6 +198,8 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
     sessions[sessionId] = {owner: participantId,
                            direction: direction,
                            options: sessionOptions,
+                           origin: origin,
+                           preference: formatPreference,
                            state: 'initialized'};
 
     var locality;
@@ -250,7 +258,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
       return Promise.reject('Session does NOT exist');
     }
 
-    terminateSession(sessionId);
+    terminateSession(sessionId).catch((whatever) => {});
     on_session_aborted(session.owner, sessionId, session.direction, reason);
     return Promise.resolve('ok');
   };
@@ -272,6 +280,60 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
     return rpcReq.mediaOnOff(session.locality.node, sessionId, track, session.direction, onOff);
   };
 
+  const rebuildAnalyticsSubscriber = sessionId => {
+    log.debug('rebuildAnalyticsSubscriber, sessionId:', sessionId);
+
+    let session = sessions[sessionId];
+    session.state = 'initialized';
+
+    var locality;
+    return rpcReq.getWorkerNode(cluster_name, session.options.type, {room: in_room, task: sessionId}, session.origin)
+      .then(function(accessLocality) {
+        locality = accessLocality;
+        log.debug('getWorkerNode ok, participantId:', session.owner, 'sessionId:', sessionId, 'locality:', locality);
+        if (sessions[sessionId] === undefined) {
+          log.debug('Session has been aborted, sessionId:', sessionId);
+          rpcReq.recycleWorkerNode(locality.agent, locality.node, {room: in_room, task: sessionId})
+            .catch(function(reason) {
+              log.debug('AccessNode not recycled', locality);
+            });
+          return Promise.reject('Session has been aborted');
+        }
+        session.locality = locality;
+        var options = {
+          controller: self_rpc_id
+        };
+        session.options.connection && (options.connection = session.options.connection);
+        session.options.media && (options.media = session.options.media);
+        session.preference && (options.formatPreference = session.preference);
+        return rpcReq.initiate(locality.node,
+                               sessionId,
+                               session.options.type,
+                               session.direction,
+                               options);
+      })
+      .then(function() {
+        log.debug('Initiate ok, participantId:', session.owner, 'sessionId:', sessionId);
+        if (sessions[sessionId] === undefined) {
+          log.debug('Session has been aborted, sessionId:', sessionId);
+          rpcReq.terminate(locality.node, sessionId, session.direction)
+            .catch(function(reason) {
+              log.debug('Terminate fail:', reason);
+            });
+          rpcReq.recycleWorkerNode(locality.agent, locality.node, {room: in_room, task: sessionId})
+            .catch(function(reason) {
+              log.debug('AccessNode not recycled', locality);
+            });
+          return Promise.reject('Session has been aborted');
+        }
+        sessions[sessionId].state = 'connecting';
+        return 'ok';
+      }, (e) => {
+        delete sessions[sessionId];
+        return Promise.reject(e.message ? e.message : e);
+      });
+  };
+
   that.onFaultDetected = function (faultType, faultId) {
     for (var session_id in sessions) {
       var locality = sessions[session_id].locality;
@@ -280,8 +342,13 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
             direction = sessions[session_id].direction;
 
         log.info('Fault detected on node:', locality);
-        terminateSession(session_id);
         on_session_aborted(owner, session_id, direction, 'Access node exited unexpectedly');
+
+        if (sessions[session_id].options.type === 'analytics') {
+          rebuildAnalyticsSubscriber(session_id);
+        } else {
+          terminateSession(session_id).catch((whatever) => {});
+        }
       }
     }
     return Promise.resolve('ok');
@@ -291,7 +358,7 @@ module.exports.create = function(spec, rpcReq, onSessionEstablished, onSessionAb
     for (var session_id in sessions) {
       var owner = sessions[session_id].owner;
       var direction = sessions[session_id].direction;
-      terminateSession(session_id);
+      terminateSession(session_id).catch((whatever) => {});
       on_session_aborted(owner, session_id, direction, 'Room destruction');
     }
   };

@@ -8,7 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <re.h>
+#include <re/re.h>
 #include <baresip.h>
 #include "core.h"
 
@@ -103,10 +103,7 @@ static void set_state(struct call *call, enum state st)
 }
 
 extern void ep_call_closed(void *gateway, const char *peer, const char *reason);
-extern int get_video_counter(const struct video *v);
-extern int get_audio_counter(const struct audio *a);
-extern void reset_video_counter(struct video *v);
-extern void reset_audio_counter(struct audio *a);
+extern void ep_call_loss(void *gateway, const char *peer, const char *reason, void *call);
 static void check_audio_video_rx(void *arg){
     struct call *call = arg;
 
@@ -120,7 +117,7 @@ static void check_audio_video_rx(void *arg){
     bool audio_stopped = audio_frames == 0;
 
     if(video_stopped && audio_stopped){
-        ep_call_closed((void *)call->ua->owner->ep, call_peeruri(call), "connection loss");
+        ep_call_loss((void *)call->ua->owner->ep, call_peeruri(call), "connection loss", call);
     }else{
         reset_video_counter(call->video);
         reset_audio_counter(call->audio);
@@ -129,7 +126,7 @@ static void check_audio_video_rx(void *arg){
     }
 }
 
-void start_tmr_check_av_if_needed(struct call *call){
+static void start_tmr_check_av_if_needed(struct call *call){
     if(!call)
         return;
 
@@ -1790,6 +1787,12 @@ void call_connection_tx_video(void* call, uint8_t *data, size_t len)
 {
 	video_send(call_video((struct call*)call), data, len);
 }
+
+void call_connection_tx_rtcpfb(void* call, uint8_t *data, size_t len)
+{
+	video_rtcpfb_send(call_video((struct call*)call), data, len);
+}
+
 void call_connection_fir(void* call)
 {
 	video_fir(call_video((struct call*)call));

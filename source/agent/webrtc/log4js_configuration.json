@@ -17,6 +17,8 @@
     "NodeManager": "INFO",
     "WebrtcNode": "INFO",
     "WrtcConnection": "WARN",
+    "Connection": "WARN",
+    "Sdp": "INFO",
     "WorkingAgent": "INFO",
     "Connections": "INFO",
     "InternalConnectionFactory": "INFO"

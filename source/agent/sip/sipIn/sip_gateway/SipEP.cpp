@@ -71,10 +71,10 @@ bool SipEP::makeCall(const std::string& calleeURI, bool requireAudio, bool requi
     return true;
 }
 
-void SipEP::hangup(const std::string& peer)
+void SipEP::hangup(const std::string& peer, void *call)
 {
     if (m_state == REGISTERED) {
-        sipua_hangup(m_sipua, peer.c_str());
+        sipua_hangup(m_sipua, call);
         m_owner->onCallClosed(peer, "hangup");
     }
 }
@@ -88,10 +88,10 @@ bool SipEP::accept(const std::string& peer)
     return true;
 }
 
-void SipEP::reject(const std::string& peer)
+void SipEP::reject(const std::string& peer, void *call)
 {
     if (m_state == REGISTERED) {
-        sipua_hangup(m_sipua, peer.c_str());
+        sipua_hangup(m_sipua, call);
         m_owner->onCallClosed(peer, "reject");
     }
     ELOG_DEBUG("Manually Rejected!");
@@ -100,6 +100,11 @@ void SipEP::reject(const std::string& peer)
 void SipEP::helpSetCallOwner(void *call, void *owner)
 {
    sipua_set_call_owner(m_sipua, call, owner);
+}
+
+void SipEP::resetCallOwner(void *call)
+{
+   sipua_set_call_owner(m_sipua, call, NULL);
 }
 
 void SipEP::onRegisterResult(bool successful)
@@ -171,6 +176,13 @@ void SipEP::onCallClosed(const std::string& peer, const std::string& reason)
     m_owner->onCallClosed(peer, reason);
 }
 
+void SipEP::onCallLoss(const std::string& peer, const std::string& reason, void *call)
+{
+    ELOG_DEBUG("Call loss: %s", reason.c_str());
+    sipua_hangup(m_sipua, call);
+    m_owner->onCallClosed(peer, reason);
+}
+
 
 void SipEP::onSipAudioFmt(const std::string& peer, const std::string& codecName, unsigned int sampleRate) {
    m_owner->onSipAudioFmt(peer, codecName, sampleRate);
@@ -211,6 +223,13 @@ void ep_call_closed(void* gateway, const char *peer, const char* reason)
     sip_gateway::SipEP* obj = static_cast<sip_gateway::SipEP*>(gateway);
     (void)reason;
     obj->onCallClosed(peer, reason);
+}
+
+void ep_call_loss(void* gateway, const char *peer, const char* reason, void* call)
+{
+    sip_gateway::SipEP* obj = static_cast<sip_gateway::SipEP*>(gateway);
+    (void)reason;
+    obj->onCallLoss(peer, reason, call);
 }
 
 void ep_call_established(void* gateway, const char *peer, void *call, const char *audio_dir, const char *video_dir)

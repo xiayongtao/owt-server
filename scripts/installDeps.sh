@@ -11,6 +11,13 @@ PREFIX_DIR=$LIB_DIR/build/
 DISABLE_NONFREE=true
 CLEANUP=false
 NO_INTERNAL=false
+INCR_INSTALL=false
+ONLY_INSTALL=""
+SUDO=""
+
+if [[ $EUID -ne 0 ]]; then
+  SUDO="sudo -E"
+fi
 
 parse_arguments(){
   while [ "$1" != "" ]; do
@@ -23,6 +30,13 @@ parse_arguments(){
         ;;
       "--no-internal")
         NO_INTERNAL=true
+        ;;
+      "--incremental")
+        INCR_INSTALL=true
+        ;;
+      "--only")
+        shift
+        ONLY_INSTALL=$1
         ;;
     esac
     shift
@@ -62,35 +76,25 @@ fi
 
 parse_arguments $*
 
+if [ ! -z $ONLY_INSTALL ]; then
+  type install_${ONLY_INSTALL} > /dev/null 2>&1
+  [[ $? -eq 0 ]] && install_${ONLY_INSTALL} || echo "${ONLY_INSTALL} not found"
+  exit 0
+fi
+
 pause "Installing Node.js ... [press Enter]"
 install_node
 
-check_proxy
-
-read -p "Installing gcc? [No/yes]" yn
-case $yn in
-  [Yy]* ) install_gcc;;
-  [Nn]* ) ;;
-  * ) ;;
-esac
-
 if [ "$DISABLE_NONFREE" = "true" ]; then
-  pause "Nonfree libraries disabled: aac transcoding unavailable."
+  pause "Nonfree libraries disabled: aac transcoding unavailable. [press Enter]"
   install_mediadeps
 else
-  pause "Nonfree libraries enabled (DO NOT redistribute these libraries!!); to disable nonfree please use the \`--disable-nonfree' option."
+  pause "Nonfree libraries enabled (DO NOT redistribute these libraries!!); to disable nonfree please use the \`--disable-nonfree' option. [press Enter]"
   install_mediadeps_nonfree
 fi
 
 pause "Installing node building tools... [press Enter]"
 install_node_tools
-
-read -p "Installing glib? [No/yes]" yn
-case $yn in
-  [Yy]* ) install_glib;;
-  [Nn]* ) ;;
-  * ) ;;
-esac
 
 read -p "Installing zlib? [Yes/no]" yn
 case $yn in
@@ -104,8 +108,6 @@ install_libnice014
 
 pause "Installing openssl library...  [press Enter]"
 install_openssl
-
-${NO_INTERNAL} || (pause "Installing webrtc library... [press Enter]" && install_webrtc)
 
 read -p "Installing OpenH264 Video Codec provided by Cisco Systems, Inc.? [Yes/no]" yn
 case $yn in
@@ -142,11 +144,11 @@ case $yn in
   * ) install_libsrtp2;;
 esac
 
-read -p "Installing nicer? [No/yes]" yn
+read -p "Installing quic-lib? [Yes/no]" yn
 case $yn in
-  [Yy]* ) install_nicer;;
+  [Yy]* ) install_quic;;
   [Nn]* ) ;;
-  * ) ;;
+  * ) install_quic;;
 esac
 
 read -p "Installing licode? [Yes/no]" yn
@@ -156,15 +158,22 @@ case $yn in
   * ) install_licode;;
 esac
 
-if [[ "$OS" =~ .*ubuntu.* ]]
-then
-    read -p "Installing SVT HEVC Encoder ? [No/yes]" yn
-    case $yn in
-      [Yy]* ) install_svt_hevc;;
-      [Nn]* ) ;;
-      * ) ;;
-    esac
-fi
+read -p "Installing SVT HEVC Encoder ? [No/yes]" yn
+case $yn in
+  [Yy]* ) install_svt_hevc;;
+  [Nn]* ) ;;
+  * ) ;;
+esac
+
+read -p "Installing json.hpp? [Yes/no]" yn
+case $yn in
+  [Yy]* ) install_json_hpp;;
+  [Nn]* ) ;;
+  * ) install_json_hpp;;
+esac
+
+
+${NO_INTERNAL} || (pause "Installing webrtc library... [press Enter]" && install_webrtc)
 
 if [ "$CLEANUP" = "true" ]; then
   echo "Cleaning up..."

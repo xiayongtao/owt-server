@@ -19,19 +19,6 @@ usage() {
   echo
 }
 
-enable_intel_gpu_top() {
-  echo "Enable Intel GPU Top"
-  # make intel-gpu-tools accessable by non-root users.
-  ${SUDO} chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*
-  # make the above change effect at every system startup.
-  ${SUDO} chmod +x /etc/rc.local /etc/rc.d/rc.local
-  if ${SUDO} grep -RInqs "chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*" /etc/rc.local; then
-    echo "intel-gpu-tools has been authorised to non-root users."
-  else
-    ${SUDO} sh -c "echo \"chmod a+rw /sys/devices/pci0000:00/0000:00:02.0/resource*\" >> /etc/rc.local"
-  fi
-}
-
 install_deps() {
   local OS=$(${this}/detectOS.sh | awk '{print tolower($0)}')
   echo $OS
@@ -40,7 +27,7 @@ install_deps() {
   then
     echo -e "\x1b[32mInstalling dependent components and libraries via yum...\x1b[0m"
     ${OWT_UPDATE_DONE} || ${SUDO} yum update
-    ${SUDO} yum install wget
+    ${SUDO} yum install wget -y
     if [[ "$OS" =~ .*6.* ]] # CentOS 6.x
     then
       wget -c http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -57,9 +44,9 @@ install_deps() {
   elif [[ "$OS" =~ .*ubuntu.* ]]
   then
     echo -e "\x1b[32mInstalling dependent components and libraries via apt-get...\x1b[0m"
-    ${OWT_UPDATE_DONE} || ${SUDO} apt-get update
-    ${SUDO} apt-get install libboost-system-dev libboost-thread-dev liblog4cxx-dev wget bzip2
-    ${SUDO} apt-get install intel-gpu-tools
+    ${OWT_UPDATE_DONE} || ${SUDO} apt-get update -y
+    ${SUDO} apt-get install libboost-system-dev libboost-thread-dev liblog4cxx-dev wget bzip2 -y
+    ${SUDO} apt-get install intel-gpu-tools -y
   else
     echo -e "\x1b[32mUnsupported platform...\x1b[0m"
   fi
@@ -88,9 +75,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 install_deps
+${this}/install_ffmpeg.sh
 
 if ${HARDWARE_DEPS} ; then
-  enable_intel_gpu_top
+  :
 else
   # Install if no input for 15s
   read -t 15 -p "Installing OpenH264 Video Codec Library provided by Cisco Systems, Inc? [Yes/no]" yn

@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-#include <re.h>
+#include <re/re.h>
 #include <sipua.h>
 #include <baresip.h>
 #include "core.h"
@@ -11,7 +11,7 @@
 
 #define DEBUG_MODULE "sipua"
 #define DEBUG_LEVEL 7
-#include <re_dbg.h>
+#include <re/re_dbg.h>
 
 
 struct sipua_entity {         /* sip ua entity */
@@ -282,14 +282,14 @@ void sipua_call(struct sipua_entity *sipua, sipua_bool audio, sipua_bool video, 
 	return;
 }
 
-void sipua_hangup(struct sipua_entity *sipua, const char* peer)
+void sipua_hangup(struct sipua_entity *sipua, void* call)
 {
 	if (!sipua || !sipua->mq) {
 		warning("sipua entity NULL!\n");
 		return;
 	}
 
-	mqueue_push(sipua->mq, SIPUA_HANGUP, (void*)peer);
+	mqueue_push(sipua->mq, SIPUA_HANGUP, call);
 	return;
 }
 
@@ -315,7 +315,12 @@ void sipua_set_call_owner(struct sipua_entity *sipua, void *call, void *callowne
 	data = mem_zalloc(sizeof(struct sipua_call_connect), NULL);
 	data->call = call;
 	data->owner = callowner;
-	mqueue_push(sipua->mq, SIPUA_CALL_CONNECT, data);
+
+        if (callowner) {
+	    mqueue_push(sipua->mq, SIPUA_CALL_CONNECT, data);
+        } else {
+	    mqueue_push(sipua->mq, SIPUA_CALL_DISCONNECT, data);
+        }
 	return;
 }
 

@@ -25,6 +25,7 @@
             "../../common/makeRPC.js",
             "../../common/rpcChannel.js",
             "../../common/mediaUtil.js",
+            "../../../scripts/release/install_ffmpeg.sh",
             "../../../scripts/release/initauth.js",
             "../../../scripts/detectOS.sh",
             "compile_svtHevcEncoder.sh"
@@ -71,6 +72,10 @@
             {
                 "folder": "../addons/logger",
                 "name": "logger"
+            },
+            {
+                "folder": "../addons/quicIO",
+                "name": "quicIO"
             }
         ]
     },
