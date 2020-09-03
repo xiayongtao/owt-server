@@ -18,7 +18,7 @@ report_load_interval = 1000 #default: 1000, unit: millisecond
 #The max network load under which this worker can take new tasks.
 max_load = 0.85 #default: 0.85
 
-#The bandwidth of network-interface used for WebRTC peerconnections. 
+#The bandwidth of network-interface used for WebRTC peerconnections.
 network_max_scale = 1000 #unit: Mbps
 
 
@@ -32,8 +32,8 @@ regions = [] #default: [], which means all regions.
 
 
 [rabbit]
-host = "localhost" #default: "localhost"
-port = 5672 #default: 5672
+host = "rabbit.mcu.xiyan.com" #default: "localhost"
+port = 15678 #default: 5672
 
 [internal]
 #The IP address used for internal-cluster media spreading. Will use the IP got from the 'network_interface' item if 'ip_address' is not specified or equal to "".
@@ -43,8 +43,8 @@ ip_address = "" #default: ""
 # network_interface = "eth0" # default: undefined
 
 # The internal listening port range, only works for TCP now
-maxport = 0 #default: 0
-minport = 0 #default: 0
+maxport = 11000 #default: 0
+minport = 10000 #default: 0
 
 #########################################################################################
 [webrtc]
@@ -57,8 +57,8 @@ keystorePath = "./cert/certificate.pfx"
 #note, this won't work with all versions of libnice. With 0 all the available ports are used
 
 # The webrtc port range
-maxport = 0 #default: 0
-minport = 0 #default: 0
+maxport = 12000 #default: 0
+minport = 11000 #default: 0
 
 #STUN server IP address and port to be used by the server.
 #if "" is used, the address is discovered locally

@@ -3,7 +3,7 @@ keystorePath = "./cert/certificate.pfx"
 hostname = "" #default: ""
 ip_address = "" #default: ""
 # Port that the socket.io server listens at.
-port = 8080 #default: 8080
+port = 443 #default: 8080
 ssl = true #default: true
 force_tls_v12 = false #default: false, tls1 and tls1.1 will not be allowed if set to true
 #The network inferface the socket.io will be bound to in case portal.ip_address (the 'ip_address' item above) is not specified or equal to "".
@@ -41,8 +41,8 @@ regions = [] #default: [], which means all regions.
 
 
 [rabbit]
-host = "localhost" #default: "localhost"
-port = 5672 #default: 5672
+host = "rabbit.mcu.xiyan.com" #default: "localhost"
+port = 15678 #default: 5672
 
 [mongo]
 dataBaseURL = "localhost/owtdb" #default: "localhost/owtdb"

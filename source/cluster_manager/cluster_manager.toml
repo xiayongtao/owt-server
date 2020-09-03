@@ -1,6 +1,6 @@
 [rabbit]
-host = "localhost" #default: "localhost"
-port = 5672 #default: 5672
+host = "rabbit.mcu.xiyan.com" #default: "localhost"
+port = 15678 #default: 5672
 
 [manager]
 name = "owt-cluster"
