@@ -26,7 +26,7 @@ host = "rabbit.mcu.xiyan.com" #default: "localhost"
 port = 15678 #default: 5672
 
 [mongo]
-dataBaseURL = "localhost/owtdb" #default: "localhost/owtdb"
+dataBaseURL = "localhost:37017/owtdb" #default: "localhost/owtdb"
 
 [internal]
 # tcp/sctp available, tcp is default
