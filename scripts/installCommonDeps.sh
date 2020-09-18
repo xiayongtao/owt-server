@@ -412,8 +412,9 @@ install_usrsctp() {
     rm ${USRSCTP_FILE}
 
     cd usrsctp
-    autoreconf --force --install
+
     ./bootstrap
+     autoreconf --force --install
     ./configure --prefix=$PREFIX_DIR
     make && make install
   else
