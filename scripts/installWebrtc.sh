@@ -58,7 +58,8 @@ install_depot_tools(){
   fi
 
   pushd $OWT_DIR >/dev/null
-  git config http.proxy socks5://192.168.1.19:10808
+  #git config --global http.proxy socks5://192.168.1.19:10808
+  #git config --global https.proxy socks5://192.168.1.19:10808
   git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
   popd >/dev/null
 }
