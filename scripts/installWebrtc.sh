@@ -58,6 +58,7 @@ install_depot_tools(){
   fi
 
   pushd $OWT_DIR >/dev/null
+  git config http.proxy socks5://192.168.1.19:10808
   git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
   popd >/dev/null
 }
@@ -79,7 +80,7 @@ download_and_build(){
 
   export PATH="$PATH:$DEPOT_TOOLS"
   gclient sync
-  pushd src >/dev/null  
+  pushd src >/dev/null
   gn gen out --args="$GN_ARGS"
   ninja -C out call default_task_queue_factory
   all=`find ./out/obj/ -name "*.o"`
