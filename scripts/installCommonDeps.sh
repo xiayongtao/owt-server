@@ -503,6 +503,7 @@ install_svt_hevc() {
 
   mkdir build
   pushd build >/dev/null
+  #scl enable devtoolset-7 bash
   cmake -DCMAKE_C_FLAGS="-std=gnu99" -DCMAKE_INSTALL_PREFIX=${PREFIX_DIR} ..
   make && make install
   popd >/dev/null

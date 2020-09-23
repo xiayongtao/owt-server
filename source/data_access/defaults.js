@@ -77,6 +77,11 @@ const DEFAULT_ROLES = [
         role: 'normal',
         publish: {audio: true, video: true},
         subscribe: {audio: true, video: true}
+    },
+    {
+        role: 'phone',
+        publish: {audio: true, video: true},
+        subscribe: {audio: true, video: true}
     }
 ];
 
