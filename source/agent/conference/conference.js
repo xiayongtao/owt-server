@@ -409,7 +409,6 @@ var Conference = function (rpcClient, selfRpcId) {
                                                        role: 'admin',
                                                        portal: undefined,
                                                        origin: origin,
-                                                       mold: 'pc',
                                                        permission: {
                                                         subscribe: {audio: true, video: true},
                                                         publish: {audio: true, video: true}
@@ -508,10 +507,9 @@ var Conference = function (rpcClient, selfRpcId) {
                                                     role: participantInfo.role,
                                                     portal: participantInfo.portal,
                                                     origin: participantInfo.origin,
-                                                    mold: participantInfo.mold,
                                                     permission: permission
                                                    }, rpcReq);
-    room_config.notifying.participantActivities && sendMsg(participantInfo.id, 'others', 'participant', {action: 'join', data: {id: participantInfo.id, user: participantInfo.user, role: participantInfo.role,mold:participantInfo.mold}});
+    room_config.notifying.participantActivities && sendMsg(participantInfo.id, 'others', 'participant', {action: 'join', data: {id: participantInfo.id, user: participantInfo.user, role: participantInfo.role}});
     return Promise.resolve('ok');
   };
 
