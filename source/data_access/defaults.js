@@ -45,7 +45,7 @@ const DEFAULT_VIDEO_PARA = {
     resolution: ['x1/2', 'x1/4', 'hd1080p', 'hd720p'],
     framerate: [24, 30, 48, 60],
     bitrate: ['x0.6', 'x0.4', 'x0.2'],
-    keyFrameInterval: [100, 30, 5]
+    keyFrameInterval: [100, 30, 5, 2, 1]
 };
 const DEFAULT_ROLES = [
     {

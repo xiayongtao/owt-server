@@ -409,6 +409,7 @@ var Conference = function (rpcClient, selfRpcId) {
                                                        role: 'admin',
                                                        portal: undefined,
                                                        origin: origin,
+                                                       mold: 'pc',
                                                        permission: {
                                                         subscribe: {audio: true, video: true},
                                                         publish: {audio: true, video: true}
@@ -507,9 +508,10 @@ var Conference = function (rpcClient, selfRpcId) {
                                                     role: participantInfo.role,
                                                     portal: participantInfo.portal,
                                                     origin: participantInfo.origin,
+                                                    mold: participantInfo.mold,
                                                     permission: permission
                                                    }, rpcReq);
-    room_config.notifying.participantActivities && sendMsg(participantInfo.id, 'others', 'participant', {action: 'join', data: {id: participantInfo.id, user: participantInfo.user, role: participantInfo.role}});
+    room_config.notifying.participantActivities && sendMsg(participantInfo.id, 'others', 'participant', {action: 'join', data: {id: participantInfo.id, user: participantInfo.user, role: participantInfo.role,mold:participantInfo.mold}});
     return Promise.resolve('ok');
   };
 
@@ -752,7 +754,7 @@ var Conference = function (rpcClient, selfRpcId) {
       media.origin = streams[media.audio.from].info.origin;
     }
 
-    const isAudioPubPermitted = !!participants[info.owner].isPublishPermitted('audio'); 
+    const isAudioPubPermitted = !!participants[info.owner].isPublishPermitted('audio');
     return new Promise((resolve, reject) => {
       roomController && roomController.subscribe(info.owner, id, locality, media, info.type, isAudioPubPermitted, function() {
         if (participants[info.owner]) {
@@ -854,7 +856,7 @@ var Conference = function (rpcClient, selfRpcId) {
   };
 
   that.join = function(roomId, participantInfo, callback) {
-    log.debug('participant:', participantInfo, 'join room:', roomId);
+    log.info('participant:', participantInfo, 'join room:', roomId);
     var permission;
     return initRoom(roomId, participantInfo.origin)
       .then(function() {

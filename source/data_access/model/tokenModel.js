@@ -9,6 +9,7 @@ var Schema = mongoose.Schema;
 var TokenSchema = new Schema({
   user: String,
   role: String,
+  mold: String,
   room: { type: Schema.Types.ObjectId, ref: 'Room' },
   service:{ type: Schema.Types.ObjectId, ref: 'Service' },
   creationDate: Date,

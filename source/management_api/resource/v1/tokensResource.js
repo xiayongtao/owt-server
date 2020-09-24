@@ -67,6 +67,7 @@ var generateToken = function (currentRoom, authData, origin, callback) {
     var currentService = authData.service,
         user = authData.user,
         role = authData.role,
+        mold = authData.mold,
         r,
         tr,
         token,
@@ -86,6 +87,7 @@ var generateToken = function (currentRoom, authData, origin, callback) {
     token.user = user;
     token.room = currentRoom;
     token.role = role;
+    token.mold = mold
     token.service = currentService._id;
     token.creationDate = new Date();
     token.origin = origin;
@@ -136,6 +138,7 @@ exports.create = function (req, res, next) {
     var authData = req.authData;
     authData.user = (req.authData.user || (req.body && req.body.user));
     authData.role = (req.authData.role || (req.body && req.body.role));
+    authData.mold = (req.authData.mold || (req.body && req.body.mold));
     var origin = ((req.body && req.body.preference) || {isp: 'isp', region: 'region'});
 
     generateToken(req.params.room, authData, origin, function (tokenS) {

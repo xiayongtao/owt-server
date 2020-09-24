@@ -11,6 +11,7 @@ var Participant = function(spec, rpcReq) {
     user = spec.user,
     portal = spec.portal,
     origin = spec.origin,
+    mold  = spec.mold,
     permission = spec.permission;
 
   that.update = (op, path, value) => {
@@ -107,6 +108,8 @@ var Participant = function(spec, rpcReq) {
       id: id,
       user: user,
       role: role,
+        portal:portal,
+        mold:mold
     };
   };
 
@@ -115,6 +118,8 @@ var Participant = function(spec, rpcReq) {
       id: id,
       user: user,
       role: role,
+      mold: mold,
+        portal:portal,
       permission: permission
     };
   };
