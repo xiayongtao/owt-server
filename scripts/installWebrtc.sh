@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SSL_GNI=$(cat <<-END
+SSL_GNI=$(
+  cat <<-END
 declare_args() {
   build_with_owt = false
   owt_use_openssl = false
@@ -12,7 +13,8 @@ declare_args() {
 END
 )
 
-GCLIENT_CONFIG=$(cat <<-END
+GCLIENT_CONFIG=$(
+  cat <<-END
 solutions = [
   {
     "url": "https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git",
@@ -27,7 +29,8 @@ END
 )
 
 # comment is_debug=false for debugging
-GN_ARGS=$(cat <<-END
+GN_ARGS=$(
+  cat <<-END
 rtc_use_h264=true
 ffmpeg_branding="Chrome"
 is_component_build=false
@@ -49,8 +52,8 @@ END
 OWT_DIR="tools-owt"
 DEPOT_TOOLS=
 
-install_depot_tools(){
-  DEPOT_TOOLS=`pwd`"/${OWT_DIR}/depot_tools"
+install_depot_tools() {
+  DEPOT_TOOLS=$(pwd)"/${OWT_DIR}/depot_tools"
   if [ -d $OWT_DIR/depot_tools ]; then
     echo "depot_tools already installed."
     return 0
@@ -60,34 +63,31 @@ install_depot_tools(){
   fi
 
   pushd $OWT_DIR >/dev/null
-  git config http.proxy socks5://192.168.1.19:10808
-  git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+  ALL_PROXY=socks5://192.168.1.19:10808 git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
   popd >/dev/null
 }
 
-download_and_build(){
+download_and_build() {
   if [ -d src ]; then
     echo "src already exists."
   else
     git clone -b 79-sdk https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git src
     mkdir -p src/build_overrides/ssl
-    echo $SSL_GNI > src/build_overrides/ssl/ssl.gni
-    echo $GCLIENT_CONFIG > .gclient
+    echo $SSL_GNI >src/build_overrides/ssl/ssl.gni
+    echo $GCLIENT_CONFIG >.gclient
   fi
 
-  if [[ "$OS" =~ .*centos.* ]]
-  then
+  if [[ "$OS" =~ .*centos.* ]]; then
     source scl_source enable devtoolset-7
   fi
 
   export PATH="$PATH:$DEPOT_TOOLS"
-  gclient sync  --no-history
+  gclient sync --no-history
   pushd src >/dev/null
   gn gen out --args="$GN_ARGS"
   ninja -C out call default_task_queue_factory
-  all=`find ./out/obj/ -name "*.o"`
-  if [[ -n $all ]];
-  then
+  all=$(find ./out/obj/ -name "*.o")
+  if [[ -n $all ]]; then
     rm -f ../libwebrtc.a
     ar cq ../libwebrtc.a $all
     echo "Generate libwebrtc.a OK"
