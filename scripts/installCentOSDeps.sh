@@ -34,9 +34,9 @@ install_glib2(){
 install_boost(){
   if [ -d $LIB_DIR ]; then
     cd $LIB_DIR
-    wget -c http://iweb.dl.sourceforge.net/project/boost/boost/1.50.0/boost_1_50_0.tar.bz2
-    tar xvf boost_1_50_0.tar.bz2
-    cd boost_1_50_0
+    wget -c http://iweb.dl.sourceforge.net/project/boost/boost/1.65.0/boost_1_65_0.tar.bz2
+    tar xvf boost_1_65_0.tar.bz2
+    cd boost_1_65_0
     chmod +x bootstrap.sh
     ./bootstrap.sh
     ./b2 && ./b2 install --prefix=$PREFIX_DIR
@@ -50,7 +50,7 @@ installYumDeps(){
   ${SUDO} yum groupinstall " Development Tools" "Development Libraries " -y
   ${SUDO} yum install zlib-devel pkgconfig git libcurl-devel.x86_64 curl log4cxx-devel gcc gcc-c++ bzip2 bzip2-devel bzip2-libs python-devel nasm libXext-devel libXfixes-devel libpciaccess-devel libX11-devel yasm cmake -y
   ${SUDO} yum install rabbitmq-server mongodb mongodb-server java-1.7.0-openjdk gyp intel-gpu-tools which libtool freetype-devel -y
-  ${SUDO} yum install glib2-devel boost-devel -y
+  ${SUDO} yum install glib2-devel boost-devel gstreamer1-plugins-base-devel -y
   ${SUDO} yum install centos-release-scl -y
   ${SUDO} yum install devtoolset-7-gcc* -y
 }

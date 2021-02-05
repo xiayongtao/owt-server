@@ -39,6 +39,8 @@ rtc_include_internal_audio_device=false
 use_sysroot=false
 is_clang=false
 treat_warnings_as_errors=false
+rtc_enable_libevent=false
+rtc_build_libevent=false
 is_debug=false
 
 END
@@ -58,8 +60,6 @@ install_depot_tools(){
   fi
 
   pushd $OWT_DIR >/dev/null
-  #git config --global http.proxy socks5://192.168.1.19:10808
-  #git config --global https.proxy socks5://192.168.1.19:10808
   git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
   popd >/dev/null
 }
@@ -80,7 +80,7 @@ download_and_build(){
   fi
 
   export PATH="$PATH:$DEPOT_TOOLS"
-  gclient sync
+  gclient sync  --no-history
   pushd src >/dev/null
   gn gen out --args="$GN_ARGS"
   ninja -C out call default_task_queue_factory
