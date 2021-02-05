@@ -1,8 +1,8 @@
 [server]
 keystorePath = "./cert/certificate.pfx"
 superserviceID = "_auto_generated_ID_" #default: ""
-ssl = true #if use HTTPS
-port = 3000 #default: 3000, port of server
+ssl = false #if use HTTPS
+port = 12076 #default: 3000, port of server
 numberOfProcess = 4 #default: 1
 enableWebTransport = false #default: false.
 
@@ -10,8 +10,8 @@ enableWebTransport = false #default: false.
 name = "owt-cluster"
 
 [rabbit]
-host = "localhost" #default: "localhost"
-port = 5672 #default: 5672
+host = "rabbit.mcu.xiyan.com" #default: "localhost"
+port = 15678 #default: 15672
 
 [mongo]
-dataBaseURL = "localhost/owtdb" #default: "localhost/owtdb"
+dataBaseURL = "localhost:37017/owtdb" #default: "localhost/owtdb"
