@@ -46,8 +46,8 @@ var Region = {
 };
 
 var Resolution = {
-  width: { type: Number, default: 640 },
-  height: { type: Number, default: 480 }
+    width: {type: Number, default: 1920},
+    height: {type: Number, default: 1080}
 };
 
 var AudioSchema = new Schema({

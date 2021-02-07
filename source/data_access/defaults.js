@@ -42,37 +42,47 @@ const DEFAULT_VIDEO_OUT = [
   { codec: 'vp9' },
 ];
 const DEFAULT_VIDEO_PARA = {
-  resolution: ['x3/4', 'x2/3', 'x1/2', 'x1/3', 'x1/4', 'hd1080p', 'hd720p', 'svga', 'vga', 'qvga', 'cif'],
-  framerate: [6, 12, 15, 24, 30, 48, 60],
-  bitrate: ['x0.8', 'x0.6', 'x0.4', 'x0.2'],
-  keyFrameInterval: [100, 30, 5, 2, 1]
+    resolution: ['x1/2', 'x1/4', 'hd1080p', 'hd720p'],
+    framerate: [24, 30, 48, 60],
+    bitrate: ['x0.6', 'x0.4', 'x0.2'],
+    keyFrameInterval: [100, 30, 5, 2, 1]
 };
 const DEFAULT_ROLES = [
-  {
-    role: 'presenter',
-    publish: { audio: true, video: true },
-    subscribe: { audio: true, video: true }
-  },
-  {
-    role: 'viewer',
-    publish: {audio: false, video: false },
-    subscribe: {audio: true, video: true }
-  },
-  {
-    role: 'audio_only_presenter',
-    publish: {audio: true, video: false },
-    subscribe: {audio: true, video: false }
-  },
-  {
-    role: 'video_only_viewer',
-    publish: {audio: false, video: false },
-    subscribe: {audio: false, video: true }
-  },
-  {
-    role: 'sip',
-    publish: { audio: true, video: true },
-    subscribe: { audio: true, video: true }
-  }
+    {
+        role: 'presenter',
+        publish: {audio: true, video: true},
+        subscribe: {audio: true, video: true}
+    },
+    {
+        role: 'viewer',
+        publish: {audio: false, video: false},
+        subscribe: {audio: true, video: true}
+    },
+    {
+        role: 'audio_only_presenter',
+        publish: {audio: true, video: false},
+        subscribe: {audio: true, video: false}
+    },
+    {
+        role: 'video_only_viewer',
+        publish: {audio: false, video: false},
+        subscribe: {audio: false, video: true}
+    },
+    {
+        role: 'sip',
+        publish: {audio: true, video: true},
+        subscribe: {audio: true, video: true}
+    },
+    {
+        role: 'normal',
+        publish: {audio: true, video: true},
+        subscribe: {audio: true, video: true}
+    },
+    {
+        role: 'phone',
+        publish: {audio: true, video: true},
+        subscribe: {audio: true, video: true}
+    }
 ];
 
 const DEFAULT_ROOM_CONFIG = {
